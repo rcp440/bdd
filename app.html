@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Asistencia al Grupo</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    :root {
+      --bg: #F5F4F0;
+      --card: #FFFFFF;
+      --text: #1A1A18;
+      --muted: #8A8A80;
+      --border: #E2E1DC;
+      --green: #1D9E75;
+      --green-bg: #EBF8F3;
+      --red: #D04030;
+      --red-bg: #FCECEA;
+      --purple: #5B4FD4;
+      --purple-bg: #EFEDFC;
+      --radius: 14px;
+      --radius-sm: 9px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); }
+
+    .app { max-width: 480px; margin: 0 auto; padding: 0 0 210px; min-height: 100vh; }
+
+    /* HEADER */
+    .header { padding: 52px 20px 16px; background: var(--bg); position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--border); }
+    .header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .header h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.5px; line-height: 1.2; }
+    .header h1 span { color: var(--purple); }
+    .header-info { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .logout-btn { background: none; border: none; color: var(--red); cursor: pointer; font-size: 12px; font-weight: 600; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+    .logout-btn:hover { background: var(--red-bg); border-color: var(--red); }
+
+    .date-pill-wrap { position: relative; display: inline-block; margin-top: 4px; cursor: pointer; }
+    .date-pill { font-family: 'DM Mono', monospace; font-size: 11px; background: var(--border); color: var(--muted); padding: 4px 10px; border-radius: 20px; white-space: nowrap; user-select: none; }
+    .date-pill-wrap:hover .date-pill { background: var(--purple-bg); color: var(--purple); }
+    .date-pill-wrap input[type="date"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+
+    /* STATS */
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 10px 20px; }
+    .stat { background: var(--card); border-radius: var(--radius); padding: 8px 10px; text-align: center; border: 1px solid var(--border); }
+    .stat-num { font-size: 22px; font-weight: 600; letter-spacing: -1px; color: var(--text); }
+    .stat-num.g { color: var(--green); }
+    .stat-num.r { color: var(--red); }
+    .stat-lbl { font-size: 10px; color: var(--muted); margin-top: 1px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    /* LIST */
+    .list-header { padding: 4px 20px 10px; display: flex; align-items: center; justify-content: space-between; }
+    .list-header span { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .list-header button { font-size: 12px; color: var(--purple); background: none; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 500; }
+    .list { padding: 0 20px; display: flex; flex-direction: column; gap: 6px; }
+
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; transition: border-color 0.15s, background 0.15s; }
+    .card.presente { border-color: var(--green); background: var(--green-bg); }
+    .card.ausente { border-color: #E8C8C4; background: var(--red-bg); }
+
+    .avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; background: var(--purple-bg); color: var(--purple); }
+    .card.presente .avatar { background: #D0F0E5; color: #0D6647; }
+    .card.ausente .avatar { background: #F5D5D0; color: #8B2010; }
+
+    .info { flex: 1; min-width: 0; }
+    .name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .phone-input { font-size: 11px; color: var(--muted); margin-top: 1px; font-family: 'DM Mono', monospace; background: transparent; border: none; outline: none; padding: 0; width: 100%; }
+    .phone-input:focus { color: var(--text); }
+    .obs-input { width: 100%; border: none; border-top: 1px solid rgba(0,0,0,0.08); background: transparent; font-size: 11px; font-family: 'DM Sans', sans-serif; color: var(--text); padding: 5px 2px 1px; outline: none; margin-top: 2px; }
+    .obs-input::placeholder { color: var(--muted); font-style: italic; }
+    .status-txt { font-size: 10px; margin-top: 1px; font-weight: 500; }
+    .card.presente .status-txt { color: var(--green); }
+    .card.ausente .status-txt { color: var(--red); }
+
+    .btns { display: flex; gap: 4px; flex-shrink: 0; }
+    .bp, .ba { border: 1px solid var(--border); border-radius: var(--radius-sm); width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; cursor: pointer; background: var(--bg); color: var(--muted); transition: all 0.1s; }
+    .bp.on { background: var(--green); border-color: var(--green); color: #fff; }
+    .ba.on { background: var(--red); border-color: var(--red); color: #fff; }
+
+    /* ADD FORM */
+    .add-section { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: var(--bg); border-top: 1px solid var(--border); padding: 8px 20px 18px; z-index: 9; }
+    .add-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .add-fields { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+    .add-fields input { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 12px; font-size: 13px; font-family: 'DM Sans', sans-serif; background: var(--card); color: var(--text); outline: none; }
+    .add-fields input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--purple-bg); }
+    .add-actions { display: flex; gap: 8px; }
+    .add-btn { flex: 1; background: var(--purple); color: #fff; border: none; border-radius: var(--radius-sm); padding: 8px; font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; letter-spacing: -0.2px; }
+    .add-btn:active { opacity: 0.85; }
+    .save-btn { flex: 1; background: var(--green); color: #fff; border: none; border-radius: var(--radius-sm); padding: 9px; font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .save-btn .icon { font-size: 15px; }
+
+    /* TOAST */
+    .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(10px); background: var(--text); color: #fff; border-radius: 30px; padding: 10px 20px; font-size: 13px; font-weight: 500; opacity: 0; transition: all 0.25s; pointer-events: none; white-space: nowrap; z-index: 100; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast.ok { background: var(--green); }
+    .toast.err { background: var(--red); }
+
+    .empty { text-align: center; padding: 32px 20px; color: var(--muted); font-size: 14px; }
+    #printReport { display: none; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <h1>Asistencia <span>·</span> al Grupo</h1>
+        <div class="header-info" id="headerInfo"></div>
+        <div class="date-pill-wrap">
+          <div class="date-pill" id="date-pill"></div>
+          <input type="date" id="date-input" />
+        </div>
+      </div>
+      <button class="logout-btn" onclick="logout()">Salir</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num" id="sTotal">0</div><div class="stat-lbl">Total</div></div>
+    <div class="stat"><div class="stat-num g" id="sPres">0</div><div class="stat-lbl">Presentes</div></div>
+    <div class="stat"><div class="stat-num r" id="sAus">0</div><div class="stat-lbl">Ausentes</div></div>
+  </div>
+
+  <div class="list-header">
+    <span>Discípulos</span>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <button onclick="descargarCSV()" title="Descargar CSV" style="font-size:12px;color:var(--green);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;">⬇ CSV</button>
+      <button onclick="imprimirPDF()" title="Informe PDF" style="font-size:12px;color:var(--purple);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;">⬇ PDF</button>
+      <button id="toggleAllBtn" onclick="toggleAll()">Marcar todos</button>
+    </div>
+  </div>
+  <div class="list" id="list"></div>
+</div>
+
+<div class="add-section">
+  <div class="add-title">Agregar discípulo</div>
+  <div class="add-fields">
+    <input type="text" id="nNombre" placeholder="Nombre y apellido" maxlength="50" onkeydown="if(event.key==='Enter')document.getElementById('nCel').focus()" />
+    <input type="tel" id="nCel" placeholder="Celular (ej: 2996205606)" maxlength="20" onkeydown="if(event.key==='Enter')addPerson()" />
+  </div>
+  <div class="add-actions">
+    <button class="add-btn" onclick="addPerson()">+ Agregar discípulo</button>
+    <button class="save-btn" id="saveBtn" onclick="guardar()"><span class="icon">💾</span> Guardar</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div id="printReport"></div>
+
+<script>
+  const API_URL = 'http://localhost:3000/api';
+  let lider = JSON.parse(sessionStorage.getItem('lider'));
+  let discipulos = JSON.parse(sessionStorage.getItem('discipulos')) || [];
+  let people = [];
+  let selectedDate = localStorage.getItem('selectedDate') || new Date().toISOString().slice(0, 10);
+
+  if (!lider) {
+    window.location.href = 'index.html';
+    throw new Error('No autenticado');
+  }
+
+  document.getElementById('headerInfo').textContent = `${lider.nombre} • ${discipulos.length} discípulos`;
+  people = discipulos.map(d => ({ id: d.id, name: d.nombre, phone: d.celular || '', obs: '', status: 'a' }));
+
+  function dateObj() { return new Date(selectedDate + 'T12:00:00'); }
+  function todayStr() { return dateObj().toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long', year:'numeric' }); }
+  function todayShort() { return dateObj().toLocaleDateString('es-AR'); }
+
+  function setDate(val) {
+    selectedDate = val;
+    localStorage.setItem('selectedDate', val);
+    document.getElementById('date-pill').textContent = todayStr();
+    loadAsistencia();
+  }
+
+  const dateInput = document.getElementById('date-input');
+  dateInput.value = selectedDate;
+  dateInput.addEventListener('change', () => {
+    if (dateInput.value !== selectedDate) {
+      setDate(dateInput.value);
+    }
+  });
+  setDate(selectedDate);
+
+  async function loadAsistencia() {
+    try {
+      const res = await fetch(`${API_URL}/asistencia/${lider.id}/${selectedDate}`);
+      const data = await res.json();
+
+      if (data.registros && data.registros.length > 0) {
+        data.registros.forEach(reg => {
+          const person = people.find(p => p.id === reg.discipulo_id);
+          if (person) {
+            person.status = reg.presente ? 'p' : 'a';
+            person.phone = reg.celular || person.phone;
+            person.obs = reg.observacion || '';
+          }
+        });
+      }
+      render();
+    } catch (err) {
+      console.error('Error cargando asistencia:', err);
+    }
+  }
+
+  function initials(n) {
+    return n.trim().split(' ').slice(0,2).map(w=>w[0].toUpperCase()).join('');
+  }
+
+  function render() {
+    const list = document.getElementById('list');
+    if (!people.length) {
+      list.innerHTML = '<div class="empty">📋 No hay discípulos agregados</div>';
+      document.getElementById('sTotal').textContent = '0';
+      document.getElementById('sPres').textContent = '0';
+      document.getElementById('sAus').textContent = '0';
+      return;
+    }
+
+    const total = people.length;
+    const pres = people.filter(p => p.status === 'p').length;
+    const aus = total - pres;
+
+    document.getElementById('sTotal').textContent = total;
+    document.getElementById('sPres').textContent = pres;
+    document.getElementById('sAus').textContent = aus;
+
+    list.innerHTML = people.map((p, i) => `
+      <div class="card ${p.status === 'p' ? 'presente' : 'ausente'}">
+        <div class="avatar">${initials(p.name)}</div>
+        <div class="info">
+          <div class="name">${p.name}</div>
+          <input class="phone-input" type="tel" value="${p.phone}" placeholder="Celular" onchange="people[${i}].phone = this.value" />
+          <div class="status-txt">${p.status === 'p' ? '✓ Presente' : '✗ Ausente'}</div>
+          <input class="obs-input" type="text" value="${p.obs}" placeholder="Observación" onchange="people[${i}].obs = this.value" />
+        </div>
+        <div class="btns">
+          <button class="bp ${p.status === 'p' ? 'on' : ''}" onclick="people[${i}].status = 'p'; render()">✓</button>
+          <button class="ba ${p.status === 'a' ? 'on' : ''}" onclick="people[${i}].status = 'a'; render()">✗</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function addPerson() {
+    const nombre = document.getElementById('nNombre').value.trim();
+    const celular = document.getElementById('nCel').value.trim();
+
+    if (!nombre) {
+      toast('Ingresa el nombre', 'err');
+      return;
+    }
+
+    people.push({ name: nombre, phone: celular, obs: '', status: 'a' });
+    document.getElementById('nNombre').value = '';
+    document.getElementById('nCel').value = '';
+    render();
+    toast('Discípulo agregado', 'ok');
+  }
+
+  async function guardar() {
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+
+    try {
+      const newPeople = people.filter(p => !p.id);
+      for (const person of newPeople) {
+        const resNew = await fetch(`${API_URL}/discipulos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lider_id: lider.id,
+            nombre: person.name,
+            celular: person.phone
+          })
+        });
+
+        if (!resNew.ok) {
+          const errData = await resNew.json().catch(() => null);
+          throw new Error(errData?.error || 'No se pudo crear el discípulo');
+        }
+
+        const dataNew = await resNew.json();
+        person.id = dataNew.id;
+      }
+
+      const registros = people.map(p => ({
+        discipulo_id: p.discipulo_id ?? p.id,
+        presente: p.status === 'p',
+        celular: p.phone,
+        observacion: p.obs
+      }));
+
+      const res = await fetch(`${API_URL}/asistencia`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lider_id: lider.id,
+          fecha: selectedDate,
+          registros
+        })
+      });
+
+      if (res.ok) {
+        toast('✓ Asistencia guardada en la BD', 'ok');
+      } else {
+        const errData = await res.json().catch(() => null);
+        toast(errData?.error ? `Error: ${errData.error}` : 'Error al guardar', 'err');
+      }
+    } catch (err) {
+      toast(err.message.includes('Error') ? err.message : 'Error de conexión', 'err');
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function toggleAll() {
+    const allPresent = people.every(p => p.status === 'p');
+    people.forEach(p => { p.status = allPresent ? 'a' : 'p'; });
+    render();
+  }
+
+  function descargarCSV() {
+    if (!people.length) {
+      toast('No hay datos para descargar', 'err');
+      return;
+    }
+
+    const fecha = todayShort();
+    const header = ['Nombre', 'Celular', 'Estado', 'Observación'];
+    const rows = people.map(p => [
+      p.name,
+      p.phone,
+      p.status === 'p' ? 'Presente' : 'Ausente',
+      p.obs
+    ]);
+
+    const csv = [header, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `asistencia_${fecha}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function imprimirPDF() {
+    if (!people.length) {
+      toast('No hay datos para imprimir', 'err');
+      return;
+    }
+
+    const fecha = todayShort();
+    const pres = people.filter(p => p.status === 'p').length;
+    const aus = people.length - pres;
+
+    const filas = people.map((p, i) => `
+      <tr style="background:${p.status==='p'?'#EBF8F3':'#FCECEA'}">
+        <td style="padding:7px 8px;border-bottom:1px solid #eee">${i+1}</td>
+        <td style="padding:7px 8px;border-bottom:1px solid #eee;font-weight:500">${p.name}</td>
+        <td style="padding:7px 8px;border-bottom:1px solid #eee;font-family:monospace;font-size:12px">${p.phone||''}</td>
+        <td style="padding:7px 8px;border-bottom:1px solid #eee;font-weight:600;color:${p.status==='p'?'#1D9E75':'#D04030'}">${p.status==='p'?'Presente':'Ausente'}</td>
+        <td style="padding:7px 8px;border-bottom:1px solid #eee;font-size:12px;color:#555">${p.obs||''}</td>
+      </tr>`).join('');
+
+    const report = document.getElementById('printReport');
+    report.innerHTML = `
+      <div style="font-family:Arial,sans-serif;padding:24px;max-width:780px;margin:0 auto">
+        <div style="text-align:center;border-bottom:3px solid #5B4FD4;padding-bottom:14px;margin-bottom:20px">
+          <h1 style="color:#5B4FD4;font-size:22px;margin:0 0 6px">Asistencia al Grupo</h1>
+          <p style="margin:0;color:#444;font-size:13px">
+            <strong>Fecha:</strong> ${fecha} | <strong>Líder:</strong> ${lider.nombre}
+          </p>
+        </div>
+        <div style="display:flex;gap:12px;margin-bottom:20px;text-align:center">
+          <div style="flex:1;border:1px solid #ccc;border-radius:8px;padding:10px">
+            <div style="font-size:26px;font-weight:700">${people.length}</div>
+            <div style="font-size:10px;color:#888;text-transform:uppercase">Total</div>
+          </div>
+          <div style="flex:1;border:2px solid #1D9E75;border-radius:8px;padding:10px;background:#EBF8F3">
+            <div style="font-size:26px;font-weight:700;color:#1D9E75">${pres}</div>
+            <div style="font-size:10px;color:#888;text-transform:uppercase">Presentes</div>
+          </div>
+          <div style="flex:1;border:2px solid #D04030;border-radius:8px;padding:10px;background:#FCECEA">
+            <div style="font-size:26px;font-weight:700;color:#D04030">${aus}</div>
+            <div style="font-size:10px;color:#888;text-transform:uppercase">Ausentes</div>
+          </div>
+        </div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:#f5f4f0;border-bottom:2px solid #5B4FD4">
+              <th style="padding:10px;text-align:left;font-weight:600">#</th>
+              <th style="padding:10px;text-align:left;font-weight:600">Nombre</th>
+              <th style="padding:10px;text-align:left;font-weight:600">Celular</th>
+              <th style="padding:10px;text-align:left;font-weight:600">Estado</th>
+              <th style="padding:10px;text-align:left;font-weight:600">Observación</th>
+            </tr>
+          </thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </div>`;
+
+    const element = document.getElementById('printReport');
+    const opt = {
+      margin: 10,
+      filename: `asistencia_${fecha}.pdf`,
+      image: { type: 'png', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+    };
+    html2pdf().set(opt).from(element).save();
+  }
+
+  function toast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + (type || '');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  function logout() {
+    if (confirm('¿Estás seguro de que deseas salir?')) {
+      sessionStorage.clear();
+      window.location.href = 'index.html';
+    }
+  }
+
+  loadAsistencia();
+  render();
+</script>
+
+</body>
+</html>
