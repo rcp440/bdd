@@ -163,6 +163,7 @@
   }
 
   let editingId = null;
+  let lideresCached = [];
 
   function fmtFecha(iso) {
     if (!iso) return '';
@@ -183,7 +184,8 @@
         container.innerHTML = '<div class="empty">No hay líderes registrados</div>';
         return;
       }
-      container.innerHTML = data.lideres.map(l => `
+      lideresCached = data.lideres;
+      container.innerHTML = data.lideres.map((l, i) => `
         <div class="leader-card">
           <div class="avatar" style="background:${l.rol === 'admin' ? 'var(--purple);color:#fff' : 'var(--purple-bg);color:var(--purple)'}">
             ${initials(l.nombre)}
@@ -197,7 +199,7 @@
             </div>
           </div>
           <div class="card-actions">
-            <button class="action-btn edit" onclick="openEdit(${l.id}, ${JSON.stringify(l.nombre)}, ${JSON.stringify(l.usuario)}, ${JSON.stringify(l.email)}, ${JSON.stringify(l.rol)}, ${JSON.stringify(l.fecha_nacimiento || '')})">Editar</button>
+            <button class="action-btn edit" onclick="openEdit(${i})">Editar</button>
             ${l.id !== lider.id ? `
               <button class="action-btn ${l.activo ? '' : 'activate'}"
                 onclick="toggleActivo(${l.id}, ${l.activo ? 'true' : 'false'})">
@@ -211,13 +213,14 @@
     }
   }
 
-  function openEdit(id, nombre, usuario, email, rol, fechaNac) {
-    editingId = id;
-    document.getElementById('eNombre').value = nombre;
-    document.getElementById('eUsuario').value = usuario;
-    document.getElementById('eEmail').value = email;
-    document.getElementById('eRol').value = rol;
-    document.getElementById('eFechaNac').value = fechaNac || '';
+  function openEdit(idx) {
+    const l = lideresCached[idx];
+    editingId = l.id;
+    document.getElementById('eNombre').value = l.nombre;
+    document.getElementById('eUsuario').value = l.usuario;
+    document.getElementById('eEmail').value = l.email;
+    document.getElementById('eRol').value = l.rol;
+    document.getElementById('eFechaNac').value = l.fecha_nacimiento || '';
     document.getElementById('eContrasena').value = '';
     document.getElementById('editMsg').className = 'msg';
     document.getElementById('modalOverlay').classList.add('open');
