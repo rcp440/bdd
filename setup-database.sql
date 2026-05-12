@@ -69,6 +69,21 @@ END;
 
 GO
 
+-- Tabla de Reuniones (observación por encuentro)
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Reuniones')
+BEGIN
+    CREATE TABLE Reuniones (
+        id INT PRIMARY KEY IDENTITY(1,1),
+        lider_id INT NOT NULL,
+        fecha DATE NOT NULL,
+        observacion VARCHAR(1000),
+        FOREIGN KEY (lider_id) REFERENCES Lideres(id) ON DELETE CASCADE,
+        CONSTRAINT uq_reunion UNIQUE(lider_id, fecha)
+    );
+END;
+
+GO
+
 -- ========================================
 -- Datos de prueba (usuario demo)
 -- ========================================

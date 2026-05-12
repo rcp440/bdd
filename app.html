@@ -101,6 +101,10 @@
 
     .empty { text-align: center; padding: 32px 20px; color: var(--muted); font-size: 14px; }
     #printReport { display: none; }
+
+    /* OBSERVACIÓN DEL ENCUENTRO */
+    .reunion-obs { width: 100%; border: none; border-top: 1px solid var(--border); background: transparent; font-size: 12px; font-family: 'DM Sans', sans-serif; color: var(--text); padding: 6px 0 2px; outline: none; resize: none; margin-top: 6px; min-height: 32px; }
+    .reunion-obs::placeholder { color: var(--muted); font-style: italic; }
   </style>
 </head>
 <body>
@@ -110,10 +114,11 @@
       <div>
         <h1>Asistencia <span>·</span> al Grupo</h1>
         <div class="header-info" id="headerInfo"></div>
-        <div class="date-pill-wrap">
+        <div class="date-pill-wrap" id="datePillWrap">
           <div class="date-pill" id="date-pill"></div>
           <input type="date" id="date-input" />
         </div>
+        <textarea id="reunionObs" class="reunion-obs" placeholder="Observación del encuentro..." maxlength="500" rows="2"></textarea>
       </div>
       <button class="logout-btn" onclick="logout()">Salir</button>
     </div>
@@ -163,6 +168,16 @@
     throw new Error('No autenticado');
   }
 
+  async function loadReunion() {
+    try {
+      const res = await fetch(`${API_URL}/reunion/${lider.id}/${selectedDate}`);
+      const data = await res.json();
+      document.getElementById('reunionObs').value = data.observacion || '';
+    } catch (err) {
+      document.getElementById('reunionObs').value = '';
+    }
+  }
+
   async function loadDiscipulos() {
     try {
       const res = await fetch(`${API_URL}/discipulos/${lider.id}`);
@@ -181,6 +196,7 @@
   function setDate(val) {
     selectedDate = val;
     document.getElementById('date-pill').textContent = todayStr();
+    loadReunion();
     loadAsistencia();
   }
 
@@ -190,6 +206,9 @@
     if (dateInput.value !== selectedDate) {
       setDate(dateInput.value);
     }
+  });
+  document.getElementById('datePillWrap').addEventListener('click', () => {
+    try { dateInput.showPicker(); } catch(e) { dateInput.focus(); }
   });
   setDate(selectedDate);
 
@@ -315,6 +334,12 @@
       });
 
       if (res.ok) {
+        const obsReunion = document.getElementById('reunionObs').value.trim();
+        await fetch(`${API_URL}/reunion`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lider_id: lider.id, fecha: selectedDate, observacion: obsReunion })
+        });
         toast('✓ Asistencia guardada en la BD', 'ok');
       } else {
         const errData = await res.json().catch(() => null);

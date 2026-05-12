@@ -259,6 +259,45 @@ app.get('/api/asistencia/:lider_id/:fecha', async (req, res) => {
   }
 });
 
+// OBTENER OBSERVACIÓN DEL ENCUENTRO
+app.get('/api/reunion/:lider_id/:fecha', async (req, res) => {
+  try {
+    const { lider_id, fecha } = req.params;
+    const request = pool.request();
+    request.input('lider_id', sql.Int, parseInt(lider_id));
+    request.input('fecha', sql.Date, fecha);
+    const result = await request.query(
+      'SELECT observacion FROM Reuniones WHERE lider_id = @lider_id AND fecha = @fecha'
+    );
+    res.json({ observacion: result.recordset[0]?.observacion || '' });
+  } catch (err) {
+    console.error('Error obteniendo reunión:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
+// GUARDAR OBSERVACIÓN DEL ENCUENTRO
+app.post('/api/reunion', async (req, res) => {
+  try {
+    const { lider_id, fecha, observacion } = req.body;
+    const fechaObj = new Date(fecha + 'T12:00:00');
+    const request = pool.request();
+    request.input('lider_id', sql.Int, lider_id);
+    request.input('fecha', sql.Date, fechaObj);
+    request.input('observacion', sql.VarChar, observacion || '');
+    await request.query(`
+      IF EXISTS (SELECT 1 FROM Reuniones WHERE lider_id = @lider_id AND fecha = @fecha)
+        UPDATE Reuniones SET observacion = @observacion WHERE lider_id = @lider_id AND fecha = @fecha
+      ELSE
+        INSERT INTO Reuniones (lider_id, fecha, observacion) VALUES (@lider_id, @fecha, @observacion)
+    `);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error guardando reunión:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
 // ==================== SERVIDOR ====================
 
 const PORT = process.env.PORT || 3000;
