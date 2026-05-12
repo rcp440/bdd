@@ -97,6 +97,10 @@
         <input type="password" id="fContrasena" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
       </div>
       <div class="form-group">
+        <label>Fecha de nacimiento</label>
+        <input type="date" id="fFechaNac">
+      </div>
+      <div class="form-group">
         <label>Rol</label>
         <select id="fRol">
           <option value="lider">Líder</option>
@@ -136,6 +140,10 @@
       </select>
     </div>
     <div class="form-group">
+      <label>Fecha de nacimiento</label>
+      <input type="date" id="eFechaNac">
+    </div>
+    <div class="form-group">
       <label>Nueva contraseña</label>
       <input type="password" id="eContrasena" placeholder="Dejar vacío para no cambiar" autocomplete="new-password">
       <div class="form-hint">Mínimo 6 caracteres si se ingresa</div>
@@ -155,6 +163,12 @@
   }
 
   let editingId = null;
+
+  function fmtFecha(iso) {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  }
 
   function initials(n) {
     return n.trim().split(' ').slice(0, 2).map(w => w[0].toUpperCase()).join('');
@@ -176,14 +190,14 @@
           </div>
           <div class="leader-info">
             <div class="leader-name">${l.nombre}</div>
-            <div class="leader-sub">${l.usuario} · ${l.email}</div>
+            <div class="leader-sub">${l.usuario} · ${l.email}${l.fecha_nacimiento ? ' · ' + fmtFecha(l.fecha_nacimiento) : ''}</div>
             <div style="margin-top:4px">
               <span class="badge ${l.rol === 'admin' ? 'badge-admin' : 'badge-lider'}">${l.rol}</span>
               <span class="badge ${l.activo ? 'badge-activo' : 'badge-inactivo'}">${l.activo ? 'activo' : 'inactivo'}</span>
             </div>
           </div>
           <div class="card-actions">
-            <button class="action-btn edit" onclick="openEdit(${l.id}, ${JSON.stringify(l.nombre)}, ${JSON.stringify(l.usuario)}, ${JSON.stringify(l.email)}, ${JSON.stringify(l.rol)})">Editar</button>
+            <button class="action-btn edit" onclick="openEdit(${l.id}, ${JSON.stringify(l.nombre)}, ${JSON.stringify(l.usuario)}, ${JSON.stringify(l.email)}, ${JSON.stringify(l.rol)}, ${JSON.stringify(l.fecha_nacimiento || '')})">Editar</button>
             ${l.id !== lider.id ? `
               <button class="action-btn ${l.activo ? '' : 'activate'}"
                 onclick="toggleActivo(${l.id}, ${l.activo ? 'true' : 'false'})">
@@ -197,12 +211,13 @@
     }
   }
 
-  function openEdit(id, nombre, usuario, email, rol) {
+  function openEdit(id, nombre, usuario, email, rol, fechaNac) {
     editingId = id;
     document.getElementById('eNombre').value = nombre;
     document.getElementById('eUsuario').value = usuario;
     document.getElementById('eEmail').value = email;
     document.getElementById('eRol').value = rol;
+    document.getElementById('eFechaNac').value = fechaNac || '';
     document.getElementById('eContrasena').value = '';
     document.getElementById('editMsg').className = 'msg';
     document.getElementById('modalOverlay').classList.add('open');
@@ -242,7 +257,8 @@
     btn.textContent = 'Guardando...';
 
     try {
-      const body = { lider_id: lider.id, nombre, usuario, email, rol };
+      const fechaNac = document.getElementById('eFechaNac').value;
+      const body = { lider_id: lider.id, nombre, usuario, email, rol, fecha_nacimiento: fechaNac || null };
       if (contrasena) body.contrasena = contrasena;
 
       const res = await fetch(`${API_URL}/lideres/${editingId}`, {
@@ -309,10 +325,11 @@
     btn.textContent = 'Creando...';
 
     try {
+      const fechaNacC = document.getElementById('fFechaNac').value;
       const res = await fetch(`${API_URL}/lideres`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lider_id: lider.id, nombre, usuario, email, contrasena, rol })
+        body: JSON.stringify({ lider_id: lider.id, nombre, usuario, email, contrasena, rol, fecha_nacimiento: fechaNacC || null })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -326,6 +343,7 @@
         document.getElementById('fEmail').value = '';
         document.getElementById('fContrasena').value = '';
         document.getElementById('fRol').value = 'lider';
+        document.getElementById('fFechaNac').value = '';
         loadLideres();
         setTimeout(() => { msg.className = 'msg'; }, 3000);
       }

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -149,7 +149,8 @@
   <div class="add-title">Agregar discípulo</div>
   <div class="add-fields">
     <input type="text" id="nNombre" placeholder="Nombre y apellido" maxlength="50" onkeydown="if(event.key==='Enter')document.getElementById('nCel').focus()" />
-    <input type="tel" id="nCel" placeholder="Celular (ej: 2996205606)" maxlength="20" onkeydown="if(event.key==='Enter')addPerson()" />
+    <input type="tel" id="nCel" placeholder="Celular (ej: 2996205606)" maxlength="20" onkeydown="if(event.key==='Enter')document.getElementById('nFechaNac').focus()" />
+    <input type="date" id="nFechaNac" title="Fecha de nacimiento" />
   </div>
   <div class="add-actions">
     <button class="add-btn" onclick="addPerson()">+ Agregar discípulo</button>
@@ -175,7 +176,13 @@
   if (lider.rol === 'admin') {
     const nav = document.getElementById('adminNav');
     nav.style.display = 'flex';
-    nav.innerHTML = '<a href="stats.html" class="nav-btn">Estadísticas</a><a href="admin.html" class="nav-btn">Admin</a>';
+    nav.innerHTML = '<a href="/stats.html" class="nav-btn">Estadísticas</a><a href="/admin.html" class="nav-btn">Admin</a>';
+  }
+
+  function fmtFecha(iso) {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
   }
 
   async function loadReunion() {
@@ -192,9 +199,9 @@
     try {
       const res = await fetch(`${API_URL}/discipulos/${lider.id}`);
       const data = await res.json();
-      people = (data.discipulos || []).map(d => ({ id: d.id, name: d.nombre, phone: d.celular || '', obs: '', status: 'a' }));
+      people = (data.discipulos || []).map(d => ({ id: d.id, name: d.nombre, phone: d.celular || '', fnac: d.fecha_nacimiento || '', obs: '', status: 'a' }));
     } catch (err) {
-      people = (JSON.parse(sessionStorage.getItem('discipulos')) || []).map(d => ({ id: d.id, name: d.nombre, phone: d.celular || '', obs: '', status: 'a' }));
+      people = (JSON.parse(sessionStorage.getItem('discipulos')) || []).map(d => ({ id: d.id, name: d.nombre, phone: d.celular || '', fnac: d.fecha_nacimiento || '', obs: '', status: 'a' }));
     }
     await loadAsistencia();
   }
@@ -273,6 +280,7 @@
         <div class="info">
           <div class="name">${p.name}</div>
           <input class="phone-input" type="tel" value="${p.phone}" placeholder="Celular" onchange="people[${i}].phone = this.value" />
+          ${p.fnac ? `<div style="font-size:10px;color:var(--muted);margin-top:1px">🎂 ${fmtFecha(p.fnac)}</div>` : ''}
           <div class="status-txt">${p.status === 'p' ? '✓ Presente' : '✗ Ausente'}</div>
           <input class="obs-input" type="text" value="${p.obs}" placeholder="Observación" onchange="people[${i}].obs = this.value" />
         </div>
@@ -287,15 +295,17 @@
   function addPerson() {
     const nombre = document.getElementById('nNombre').value.trim();
     const celular = document.getElementById('nCel').value.trim();
+    const fnac = document.getElementById('nFechaNac').value;
 
     if (!nombre) {
       toast('Ingresa el nombre', 'err');
       return;
     }
 
-    people.push({ name: nombre, phone: celular, obs: '', status: 'a' });
+    people.push({ name: nombre, phone: celular, fnac, obs: '', status: 'a' });
     document.getElementById('nNombre').value = '';
     document.getElementById('nCel').value = '';
+    document.getElementById('nFechaNac').value = '';
     render();
     toast('Discípulo agregado', 'ok');
   }
@@ -313,7 +323,8 @@
           body: JSON.stringify({
             lider_id: lider.id,
             nombre: person.name,
-            celular: person.phone
+            celular: person.phone,
+            fecha_nacimiento: person.fnac || null
           })
         });
 
@@ -490,3 +501,4 @@
 
 </body>
 </html>
+

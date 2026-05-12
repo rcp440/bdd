@@ -131,7 +131,7 @@ app.post('/api/registro', async (req, res) => {
 // AGREGAR DISCÍPULO
 app.post('/api/discipulos', async (req, res) => {
   try {
-    const { lider_id, nombre, celular } = req.body;
+    const { lider_id, nombre, celular, fecha_nacimiento } = req.body;
 
     if (!lider_id || !nombre) {
       return res.status(400).json({ error: 'Lider_id y nombre requeridos' });
@@ -141,10 +141,11 @@ app.post('/api/discipulos', async (req, res) => {
     request.input('lider_id', sql.Int, lider_id);
     request.input('nombre', sql.VarChar, nombre);
     request.input('celular', sql.VarChar, celular || '');
+    request.input('fecha_nacimiento', sql.Date, fecha_nacimiento || null);
 
     const result = await request.query(
-      `INSERT INTO Discipulos (lider_id, nombre, celular) 
-       VALUES (@lider_id, @nombre, @celular);
+      `INSERT INTO Discipulos (lider_id, nombre, celular, fecha_nacimiento)
+       VALUES (@lider_id, @nombre, @celular, @fecha_nacimiento);
        SELECT CAST(SCOPE_IDENTITY() AS INT) AS id;`
     );
 
@@ -170,7 +171,8 @@ app.get('/api/discipulos/:lider_id', async (req, res) => {
     request.input('lider_id', sql.Int, parseInt(lider_id));
 
     const result = await request.query(
-      'SELECT id, nombre, celular FROM Discipulos WHERE lider_id = @lider_id ORDER BY nombre'
+      `SELECT id, nombre, celular, CONVERT(VARCHAR(10), fecha_nacimiento, 23) AS fecha_nacimiento
+       FROM Discipulos WHERE lider_id = @lider_id ORDER BY nombre`
     );
 
     res.json({ discipulos: result.recordset });
@@ -308,7 +310,9 @@ app.get('/api/lideres', async (req, res) => {
     const r = await chk.query('SELECT rol FROM Lideres WHERE id = @id AND activo = 1');
     if (r.recordset[0]?.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
     const result = await pool.request().query(
-      'SELECT id, nombre, usuario, email, rol, activo FROM Lideres ORDER BY nombre'
+      `SELECT id, nombre, usuario, email, rol, activo,
+              CONVERT(VARCHAR(10), fecha_nacimiento, 23) AS fecha_nacimiento
+       FROM Lideres ORDER BY nombre`
     );
     res.json({ lideres: result.recordset });
   } catch (err) {
@@ -320,7 +324,7 @@ app.get('/api/lideres', async (req, res) => {
 // ---- ADMIN: CREAR LÍDER ----
 app.post('/api/lideres', async (req, res) => {
   try {
-    const { lider_id, nombre, usuario, email, contrasena, rol } = req.body;
+    const { lider_id, nombre, usuario, email, contrasena, rol, fecha_nacimiento } = req.body;
     if (!nombre || !usuario || !email || !contrasena) {
       return res.status(400).json({ error: 'Todos los campos son requeridos' });
     }
@@ -335,8 +339,10 @@ app.post('/api/lideres', async (req, res) => {
     req2.input('email', sql.VarChar, email);
     req2.input('contrasena', sql.VarChar, hash);
     req2.input('rol', sql.VarChar, rol || 'lider');
+    req2.input('fecha_nacimiento', sql.Date, fecha_nacimiento || null);
     await req2.query(
-      'INSERT INTO Lideres (nombre, usuario, email, contrasena, rol) VALUES (@nombre, @usuario, @email, @contrasena, @rol)'
+      `INSERT INTO Lideres (nombre, usuario, email, contrasena, rol, fecha_nacimiento)
+       VALUES (@nombre, @usuario, @email, @contrasena, @rol, @fecha_nacimiento)`
     );
     res.json({ ok: true });
   } catch (err) {
@@ -351,7 +357,7 @@ app.post('/api/lideres', async (req, res) => {
 // ---- ADMIN: EDITAR LÍDER ----
 app.put('/api/lideres/:id', async (req, res) => {
   try {
-    const { lider_id, nombre, usuario, email, rol, contrasena } = req.body;
+    const { lider_id, nombre, usuario, email, rol, contrasena, fecha_nacimiento } = req.body;
     if (!nombre || !usuario || !email || !rol) {
       return res.status(400).json({ error: 'Nombre, usuario, email y rol son requeridos' });
     }
@@ -365,15 +371,18 @@ app.put('/api/lideres/:id', async (req, res) => {
     req2.input('usuario', sql.VarChar, usuario);
     req2.input('email', sql.VarChar, email);
     req2.input('rol', sql.VarChar, rol);
+    req2.input('fecha_nacimiento', sql.Date, fecha_nacimiento || null);
     if (contrasena && contrasena.length >= 6) {
       const hash = await bcrypt.hash(contrasena, 10);
       req2.input('contrasena', sql.VarChar, hash);
       await req2.query(
-        'UPDATE Lideres SET nombre=@nombre, usuario=@usuario, email=@email, rol=@rol, contrasena=@contrasena WHERE id=@id'
+        `UPDATE Lideres SET nombre=@nombre, usuario=@usuario, email=@email, rol=@rol,
+         fecha_nacimiento=@fecha_nacimiento, contrasena=@contrasena WHERE id=@id`
       );
     } else {
       await req2.query(
-        'UPDATE Lideres SET nombre=@nombre, usuario=@usuario, email=@email, rol=@rol WHERE id=@id'
+        `UPDATE Lideres SET nombre=@nombre, usuario=@usuario, email=@email, rol=@rol,
+         fecha_nacimiento=@fecha_nacimiento WHERE id=@id`
       );
     }
     res.json({ ok: true });
