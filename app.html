@@ -407,14 +407,18 @@
       </div>`;
 
     const element = document.getElementById('printReport');
+    element.style.display = 'block';
     const opt = {
       margin: 10,
       filename: `asistencia_${fecha}.pdf`,
       image: { type: 'png', quality: 0.98 },
-      html2canvas: { scale: 2 },
+      html2canvas: { scale: 2, useCORS: true },
       jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
     };
-    html2pdf().set(opt).from(element).save();
+    html2pdf().set(opt).from(element).save().then(() => {
+      element.style.display = 'none';
+      element.innerHTML = '';
+    });
   }
 
   function toast(msg, type) {
