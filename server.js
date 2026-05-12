@@ -437,7 +437,7 @@ app.get('/api/admin/discipulos', async (req, res) => {
   }
 });
 
-// ---- ADMIN: EDITAR DISCÍPULO ----
+// ---- EDITAR DISCÍPULO (líder propio o admin) ----
 app.put('/api/discipulos/:id', async (req, res) => {
   try {
     const { lider_id, nombre, celular, fecha_nacimiento } = req.body;
@@ -445,7 +445,14 @@ app.put('/api/discipulos/:id', async (req, res) => {
     const chk = pool.request();
     chk.input('id', sql.Int, parseInt(lider_id));
     const r = await chk.query('SELECT rol FROM Lideres WHERE id = @id AND activo = 1');
-    if (r.recordset[0]?.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    const isAdmin = r.recordset[0]?.rol === 'admin';
+    if (!isAdmin) {
+      const own = pool.request();
+      own.input('disc_id', sql.Int, parseInt(req.params.id));
+      own.input('lider_id', sql.Int, parseInt(lider_id));
+      const o = await own.query('SELECT id FROM Discipulos WHERE id = @disc_id AND lider_id = @lider_id');
+      if (!o.recordset.length) return res.status(403).json({ error: 'Sin permisos' });
+    }
     const req2 = pool.request();
     req2.input('id', sql.Int, parseInt(req.params.id));
     req2.input('nombre', sql.VarChar, nombre);
@@ -461,14 +468,21 @@ app.put('/api/discipulos/:id', async (req, res) => {
   }
 });
 
-// ---- ADMIN: TOGGLE ACTIVO DISCÍPULO ----
+// ---- TOGGLE ACTIVO DISCÍPULO (líder propio o admin) ----
 app.patch('/api/discipulos/:id/activo', async (req, res) => {
   try {
     const { lider_id, activo } = req.body;
     const chk = pool.request();
     chk.input('id', sql.Int, parseInt(lider_id));
     const r = await chk.query('SELECT rol FROM Lideres WHERE id = @id AND activo = 1');
-    if (r.recordset[0]?.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    const isAdmin = r.recordset[0]?.rol === 'admin';
+    if (!isAdmin) {
+      const own = pool.request();
+      own.input('disc_id', sql.Int, parseInt(req.params.id));
+      own.input('lider_id', sql.Int, parseInt(lider_id));
+      const o = await own.query('SELECT id FROM Discipulos WHERE id = @disc_id AND lider_id = @lider_id');
+      if (!o.recordset.length) return res.status(403).json({ error: 'Sin permisos' });
+    }
     const req2 = pool.request();
     req2.input('id', sql.Int, parseInt(req.params.id));
     req2.input('activo', sql.Bit, activo ? 1 : 0);

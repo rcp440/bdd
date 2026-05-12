@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -106,6 +106,24 @@
     /* OBSERVACIÓN DEL ENCUENTRO */
     .reunion-obs { width: 100%; border: none; border-top: 1px solid var(--border); background: transparent; font-size: 12px; font-family: 'DM Sans', sans-serif; color: var(--text); padding: 6px 0 2px; outline: none; resize: none; margin-top: 6px; min-height: 32px; }
     .reunion-obs::placeholder { color: var(--muted); font-style: italic; }
+
+    /* MODAL EDITAR DISCÍPULO */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--card); border-radius: var(--radius); padding: 20px; width: 100%; max-width: 380px; }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .modal-title { font-size: 16px; font-weight: 600; }
+    .modal-close { background: none; border: none; font-size: 20px; color: var(--muted); cursor: pointer; line-height: 1; padding: 2px 6px; }
+    .modal-fg { margin-bottom: 12px; }
+    .modal-fg label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .modal-fg input { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); outline: none; }
+    .modal-fg input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--purple-bg); }
+    .modal-save-btn { width: 100%; background: var(--purple); color: #fff; border: none; border-radius: var(--radius-sm); padding: 10px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+    .modal-baja-btn { width: 100%; background: none; color: var(--red); border: 1px solid var(--red); border-radius: var(--radius-sm); padding: 8px; font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; margin-top: 8px; }
+    .modal-msg { margin-top: 8px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px; text-align: center; display: none; }
+    .modal-msg.ok { display: block; background: var(--green-bg); color: var(--green); }
+    .modal-msg.err { display: block; background: var(--red-bg); color: var(--red); }
+    .edit-disc-btn { border: 1px solid var(--purple-bg); border-radius: var(--radius-sm); width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; background: var(--purple-bg); color: var(--purple); flex-shrink: 0; }
   </style>
 </head>
 <body>
@@ -161,6 +179,30 @@
 <div class="toast" id="toast"></div>
 <div id="printReport"></div>
 
+<div class="modal-overlay" id="modalEditDisc" onclick="if(event.target===this)closeEditDiscModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Editar discípulo</span>
+      <button class="modal-close" onclick="closeEditDiscModal()">×</button>
+    </div>
+    <div class="modal-fg">
+      <label>Nombre completo</label>
+      <input type="text" id="edNombre" maxlength="100">
+    </div>
+    <div class="modal-fg">
+      <label>Celular</label>
+      <input type="tel" id="edCelular" maxlength="20">
+    </div>
+    <div class="modal-fg">
+      <label>Fecha de nacimiento</label>
+      <input type="date" id="edFechaNac">
+    </div>
+    <button class="modal-save-btn" id="btnGuardarDisc" onclick="guardarDiscipulo()">Guardar cambios</button>
+    <button class="modal-baja-btn" id="btnDarDeBaja" onclick="darDeBajaDisc()">Dar de baja</button>
+    <div class="modal-msg" id="editDiscMsg"></div>
+  </div>
+</div>
+
 <script>
   const API_URL = 'http://localhost:3000/api';
   let lider = JSON.parse(sessionStorage.getItem('lider'));
@@ -169,14 +211,14 @@
   let selectedDate = new Date().toISOString().slice(0, 10);
 
   if (!lider) {
-    window.location.href = '/';
+    window.location.href = 'index.html';
     throw new Error('No autenticado');
   }
 
   if (lider.rol === 'admin') {
     const nav = document.getElementById('adminNav');
     nav.style.display = 'flex';
-    nav.innerHTML = '<a href="/stats.html" class="nav-btn">Estadísticas</a><a href="/admin.html" class="nav-btn">Admin</a>';
+    nav.innerHTML = '<a href="stats.html" class="nav-btn">Estadísticas</a><a href="admin.html" class="nav-btn">Admin</a>';
   }
 
   function fmtFecha(iso) {
@@ -287,6 +329,7 @@
         <div class="btns">
           <button class="bp ${p.status === 'p' ? 'on' : ''}" onclick="people[${i}].status = 'p'; render()">✓</button>
           <button class="ba ${p.status === 'a' ? 'on' : ''}" onclick="people[${i}].status = 'a'; render()">✗</button>
+          <button class="edit-disc-btn" onclick="openEditDisc(${i})">✏</button>
         </div>
       </div>
     `).join('');
@@ -492,8 +535,100 @@
   function logout() {
     if (confirm('¿Estás seguro de que deseas salir?')) {
       sessionStorage.clear();
-      window.location.href = '/';
+      window.location.href = 'index.html';
     }
+  }
+
+  let editingDiscIdx = null;
+
+  function openEditDisc(idx) {
+    editingDiscIdx = idx;
+    const p = people[idx];
+    document.getElementById('edNombre').value = p.name;
+    document.getElementById('edCelular').value = p.phone || '';
+    document.getElementById('edFechaNac').value = p.fnac || '';
+    document.getElementById('editDiscMsg').className = 'modal-msg';
+    document.getElementById('btnDarDeBaja').style.display = p.id ? 'block' : 'none';
+    document.getElementById('modalEditDisc').classList.add('open');
+  }
+
+  function closeEditDiscModal() {
+    document.getElementById('modalEditDisc').classList.remove('open');
+    editingDiscIdx = null;
+  }
+
+  async function guardarDiscipulo() {
+    const nombre = document.getElementById('edNombre').value.trim();
+    const celular = document.getElementById('edCelular').value.trim();
+    const fechaNac = document.getElementById('edFechaNac').value;
+    const msg = document.getElementById('editDiscMsg');
+    const btn = document.getElementById('btnGuardarDisc');
+
+    msg.className = 'modal-msg';
+    if (!nombre) {
+      msg.textContent = 'El nombre es requerido';
+      msg.className = 'modal-msg err';
+      return;
+    }
+
+    const p = people[editingDiscIdx];
+    people[editingDiscIdx].name = nombre;
+    people[editingDiscIdx].phone = celular;
+    people[editingDiscIdx].fnac = fechaNac;
+
+    if (!p.id) {
+      closeEditDiscModal();
+      render();
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    try {
+      const res = await fetch(`${API_URL}/discipulos/${p.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lider_id: lider.id, nombre, celular, fecha_nacimiento: fechaNac || null })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        msg.textContent = data.error || 'Error al guardar';
+        msg.className = 'modal-msg err';
+      } else {
+        msg.textContent = '✓ Guardado';
+        msg.className = 'modal-msg ok';
+        render();
+        setTimeout(() => closeEditDiscModal(), 1000);
+      }
+    } catch (err) {
+      msg.textContent = 'Error de conexión';
+      msg.className = 'modal-msg err';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Guardar cambios';
+    }
+  }
+
+  async function darDeBajaDisc() {
+    if (!confirm('¿Dar de baja este discípulo?')) return;
+    const p = people[editingDiscIdx];
+    if (p.id) {
+      try {
+        const res = await fetch(`${API_URL}/discipulos/${p.id}/activo`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lider_id: lider.id, activo: false })
+        });
+        if (!res.ok) { toast('Error al dar de baja', 'err'); return; }
+      } catch (err) {
+        toast('Error de conexión', 'err');
+        return;
+      }
+    }
+    people.splice(editingDiscIdx, 1);
+    closeEditDiscModal();
+    render();
+    toast('Discípulo dado de baja', 'ok');
   }
 
   loadDiscipulos();
@@ -501,3 +636,5 @@
 
 </body>
 </html>
+
+
