@@ -33,14 +33,18 @@
     .badge-lider { background: var(--border); color: var(--muted); }
     .badge-activo { background: var(--green-bg); color: var(--green); }
     .badge-inactivo { background: var(--red-bg); color: var(--red); }
+    .card-actions { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
     .action-btn { background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 5px 10px; font-size: 11px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; color: var(--muted); white-space: nowrap; }
     .action-btn:hover { border-color: var(--red); color: var(--red); background: var(--red-bg); }
     .action-btn.activate:hover { border-color: var(--green); color: var(--green); background: var(--green-bg); }
+    .action-btn.edit { color: var(--purple); border-color: var(--purple-bg); background: var(--purple-bg); }
+    .action-btn.edit:hover { background: #e0dcf8; border-color: var(--purple); }
     .form-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
     .form-group { margin-bottom: 12px; }
     .form-group label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 5px; color: var(--text); text-transform: uppercase; letter-spacing: 0.04em; }
     .form-group input, .form-group select { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); outline: none; }
     .form-group input:focus, .form-group select:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--purple-bg); }
+    .form-hint { font-size: 10px; color: var(--muted); margin-top: 3px; }
     .submit-btn { width: 100%; background: var(--purple); color: #fff; border: none; border-radius: var(--radius-sm); padding: 10px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; margin-top: 4px; }
     .submit-btn:hover { opacity: 0.9; }
     .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -48,6 +52,15 @@
     .msg.ok { display: block; background: var(--green-bg); color: var(--green); border: 1px solid #C8E6DB; }
     .msg.err { display: block; background: var(--red-bg); color: var(--red); border: 1px solid #E8C8C4; }
     .empty { text-align: center; padding: 24px; color: var(--muted); font-size: 13px; }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--card); border-radius: var(--radius); padding: 20px; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .modal-title { font-size: 16px; font-weight: 600; }
+    .modal-close { background: none; border: none; font-size: 20px; color: var(--muted); cursor: pointer; line-height: 1; padding: 2px 6px; }
+    .modal-close:hover { color: var(--text); }
   </style>
 </head>
 <body>
@@ -96,6 +109,42 @@
   </div>
 </div>
 
+<!-- Modal de edición -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Editar líder</span>
+      <button class="modal-close" onclick="closeModalDirect()">×</button>
+    </div>
+    <div class="form-group">
+      <label>Nombre completo</label>
+      <input type="text" id="eNombre" maxlength="100">
+    </div>
+    <div class="form-group">
+      <label>Usuario</label>
+      <input type="text" id="eUsuario" maxlength="50" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="eEmail">
+    </div>
+    <div class="form-group">
+      <label>Rol</label>
+      <select id="eRol">
+        <option value="lider">Líder</option>
+        <option value="admin">Administrador</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Nueva contraseña</label>
+      <input type="password" id="eContrasena" placeholder="Dejar vacío para no cambiar" autocomplete="new-password">
+      <div class="form-hint">Mínimo 6 caracteres si se ingresa</div>
+    </div>
+    <button class="submit-btn" id="btnGuardar" onclick="guardarEdicion()">Guardar cambios</button>
+    <div id="editMsg" class="msg"></div>
+  </div>
+</div>
+
 <script>
   const API_URL = 'https://factor-for-references-tiger.trycloudflare.com/api';
   const lider = JSON.parse(sessionStorage.getItem('lider'));
@@ -104,6 +153,8 @@
     window.location.href = 'index.html';
     throw new Error('Sin permisos');
   }
+
+  let editingId = null;
 
   function initials(n) {
     return n.trim().split(' ').slice(0, 2).map(w => w[0].toUpperCase()).join('');
@@ -131,15 +182,90 @@
               <span class="badge ${l.activo ? 'badge-activo' : 'badge-inactivo'}">${l.activo ? 'activo' : 'inactivo'}</span>
             </div>
           </div>
-          ${l.id !== lider.id ? `
-            <button class="action-btn ${l.activo ? '' : 'activate'}"
-              onclick="toggleActivo(${l.id}, ${l.activo ? 'true' : 'false'})">
-              ${l.activo ? 'Desactivar' : 'Activar'}
-            </button>` : ''}
+          <div class="card-actions">
+            <button class="action-btn edit" onclick="openEdit(${l.id}, ${JSON.stringify(l.nombre)}, ${JSON.stringify(l.usuario)}, ${JSON.stringify(l.email)}, ${JSON.stringify(l.rol)})">Editar</button>
+            ${l.id !== lider.id ? `
+              <button class="action-btn ${l.activo ? '' : 'activate'}"
+                onclick="toggleActivo(${l.id}, ${l.activo ? 'true' : 'false'})">
+                ${l.activo ? 'Desactivar' : 'Activar'}
+              </button>` : ''}
+          </div>
         </div>
       `).join('');
     } catch (err) {
       container.innerHTML = '<div class="empty">Error al cargar líderes</div>';
+    }
+  }
+
+  function openEdit(id, nombre, usuario, email, rol) {
+    editingId = id;
+    document.getElementById('eNombre').value = nombre;
+    document.getElementById('eUsuario').value = usuario;
+    document.getElementById('eEmail').value = email;
+    document.getElementById('eRol').value = rol;
+    document.getElementById('eContrasena').value = '';
+    document.getElementById('editMsg').className = 'msg';
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+
+  function closeModalDirect() {
+    document.getElementById('modalOverlay').classList.remove('open');
+    editingId = null;
+  }
+
+  function closeModal(e) {
+    if (e.target === document.getElementById('modalOverlay')) closeModalDirect();
+  }
+
+  async function guardarEdicion() {
+    const nombre = document.getElementById('eNombre').value.trim();
+    const usuario = document.getElementById('eUsuario').value.trim();
+    const email = document.getElementById('eEmail').value.trim();
+    const rol = document.getElementById('eRol').value;
+    const contrasena = document.getElementById('eContrasena').value;
+    const msg = document.getElementById('editMsg');
+    const btn = document.getElementById('btnGuardar');
+
+    msg.className = 'msg';
+    if (!nombre || !usuario || !email) {
+      msg.textContent = 'Nombre, usuario y email son requeridos';
+      msg.className = 'msg err';
+      return;
+    }
+    if (contrasena && contrasena.length < 6) {
+      msg.textContent = 'La contraseña debe tener mínimo 6 caracteres';
+      msg.className = 'msg err';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+
+    try {
+      const body = { lider_id: lider.id, nombre, usuario, email, rol };
+      if (contrasena) body.contrasena = contrasena;
+
+      const res = await fetch(`${API_URL}/lideres/${editingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        msg.textContent = data.error || 'Error al guardar';
+        msg.className = 'msg err';
+      } else {
+        msg.textContent = '✓ Cambios guardados';
+        msg.className = 'msg ok';
+        loadLideres();
+        setTimeout(() => closeModalDirect(), 1500);
+      }
+    } catch (err) {
+      msg.textContent = 'Error de conexión';
+      msg.className = 'msg err';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Guardar cambios';
     }
   }
 

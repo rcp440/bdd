@@ -348,6 +348,44 @@ app.post('/api/lideres', async (req, res) => {
   }
 });
 
+// ---- ADMIN: EDITAR LÍDER ----
+app.put('/api/lideres/:id', async (req, res) => {
+  try {
+    const { lider_id, nombre, usuario, email, rol, contrasena } = req.body;
+    if (!nombre || !usuario || !email || !rol) {
+      return res.status(400).json({ error: 'Nombre, usuario, email y rol son requeridos' });
+    }
+    const chk = pool.request();
+    chk.input('id', sql.Int, parseInt(lider_id));
+    const r = await chk.query('SELECT rol FROM Lideres WHERE id = @id AND activo = 1');
+    if (r.recordset[0]?.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    const req2 = pool.request();
+    req2.input('id', sql.Int, parseInt(req.params.id));
+    req2.input('nombre', sql.VarChar, nombre);
+    req2.input('usuario', sql.VarChar, usuario);
+    req2.input('email', sql.VarChar, email);
+    req2.input('rol', sql.VarChar, rol);
+    if (contrasena && contrasena.length >= 6) {
+      const hash = await bcrypt.hash(contrasena, 10);
+      req2.input('contrasena', sql.VarChar, hash);
+      await req2.query(
+        'UPDATE Lideres SET nombre=@nombre, usuario=@usuario, email=@email, rol=@rol, contrasena=@contrasena WHERE id=@id'
+      );
+    } else {
+      await req2.query(
+        'UPDATE Lideres SET nombre=@nombre, usuario=@usuario, email=@email, rol=@rol WHERE id=@id'
+      );
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error editando líder:', err);
+    if (err.originalError?.info?.message?.includes('UNIQUE')) {
+      return res.status(400).json({ error: 'El usuario ya existe' });
+    }
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
 // ---- ADMIN: TOGGLE ACTIVO ----
 app.patch('/api/lideres/:id/activo', async (req, res) => {
   try {
