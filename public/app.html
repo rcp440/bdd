@@ -37,6 +37,7 @@
     .header-info { font-size: 11px; color: var(--muted); margin-top: 4px; }
     .logout-btn { background: none; border: none; color: var(--red); cursor: pointer; font-size: 12px; font-weight: 600; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
     .logout-btn:hover { background: var(--red-bg); border-color: var(--red); }
+    .nav-btn { font-size: 11px; font-weight: 600; padding: 4px 8px; border: 1px solid var(--purple-bg); border-radius: var(--radius-sm); color: var(--purple); text-decoration: none; background: var(--purple-bg); white-space: nowrap; }
 
     .date-pill-wrap { position: relative; display: inline-block; margin-top: 4px; cursor: pointer; }
     .date-pill { font-family: 'DM Mono', monospace; font-size: 11px; background: var(--border); color: var(--muted); padding: 4px 10px; border-radius: 20px; white-space: nowrap; user-select: none; }
@@ -120,7 +121,10 @@
         </div>
         <textarea id="reunionObs" class="reunion-obs" placeholder="Observación del encuentro..." maxlength="500" rows="2"></textarea>
       </div>
-      <button class="logout-btn" onclick="logout()">Salir</button>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <button class="logout-btn" onclick="logout()">Salir</button>
+        <div id="adminNav" style="display:none;gap:4px;"></div>
+      </div>
     </div>
   </div>
 
@@ -163,10 +167,15 @@
   let people = [];
   let selectedDate = new Date().toISOString().slice(0, 10);
 
-  // Verificar login
   if (!lider) {
     window.location.href = '/';
     throw new Error('No autenticado');
+  }
+
+  if (lider.rol === 'admin') {
+    const nav = document.getElementById('adminNav');
+    nav.style.display = 'flex';
+    nav.innerHTML = '<a href="/stats.html" class="nav-btn">Estadísticas</a><a href="/admin.html" class="nav-btn">Admin</a>';
   }
 
   async function loadReunion() {

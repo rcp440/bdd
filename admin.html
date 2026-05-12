@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administración - Asistencia</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F5F4F0; --card: #FFFFFF; --text: #1A1A18; --muted: #8A8A80;
+      --border: #E2E1DC; --green: #1D9E75; --green-bg: #EBF8F3;
+      --red: #D04030; --red-bg: #FCECEA; --purple: #5B4FD4; --purple-bg: #EFEDFC;
+      --radius: 14px; --radius-sm: 9px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); }
+    .app { max-width: 480px; margin: 0 auto; padding-bottom: 40px; }
+    .header { padding: 52px 20px 16px; background: var(--bg); position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--border); }
+    .header-top { display: flex; align-items: center; justify-content: space-between; }
+    .header h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.5px; }
+    .header h1 span { color: var(--purple); }
+    .back-btn { background: none; border: 1px solid var(--border); color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; }
+    .back-btn:hover { border-color: var(--text); color: var(--text); }
+    .section { padding: 16px 20px; }
+    .section-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+    .leader-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+    .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+    .leader-info { flex: 1; min-width: 0; }
+    .leader-name { font-size: 14px; font-weight: 500; }
+    .leader-sub { font-size: 11px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px; margin-right: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .badge-admin { background: var(--purple-bg); color: var(--purple); }
+    .badge-lider { background: var(--border); color: var(--muted); }
+    .badge-activo { background: var(--green-bg); color: var(--green); }
+    .badge-inactivo { background: var(--red-bg); color: var(--red); }
+    .action-btn { background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 5px 10px; font-size: 11px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; color: var(--muted); white-space: nowrap; }
+    .action-btn:hover { border-color: var(--red); color: var(--red); background: var(--red-bg); }
+    .action-btn.activate:hover { border-color: var(--green); color: var(--green); background: var(--green-bg); }
+    .form-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 5px; color: var(--text); text-transform: uppercase; letter-spacing: 0.04em; }
+    .form-group input, .form-group select { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); outline: none; }
+    .form-group input:focus, .form-group select:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--purple-bg); }
+    .submit-btn { width: 100%; background: var(--purple); color: #fff; border: none; border-radius: var(--radius-sm); padding: 10px; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; margin-top: 4px; }
+    .submit-btn:hover { opacity: 0.9; }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .msg { margin-top: 10px; padding: 9px 12px; border-radius: var(--radius-sm); font-size: 12px; text-align: center; display: none; }
+    .msg.ok { display: block; background: var(--green-bg); color: var(--green); border: 1px solid #C8E6DB; }
+    .msg.err { display: block; background: var(--red-bg); color: var(--red); border: 1px solid #E8C8C4; }
+    .empty { text-align: center; padding: 24px; color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-top">
+      <h1>Admin <span>·</span> Líderes</h1>
+      <button class="back-btn" onclick="window.location.href='app.html'">← Volver</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Líderes registrados</div>
+    <div id="lideresList"><div class="empty">Cargando...</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Nuevo líder</div>
+    <div class="form-card">
+      <div class="form-group">
+        <label>Nombre completo</label>
+        <input type="text" id="fNombre" placeholder="Nombre y apellido" maxlength="100">
+      </div>
+      <div class="form-group">
+        <label>Usuario</label>
+        <input type="text" id="fUsuario" placeholder="Usuario para login" maxlength="50" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="fEmail" placeholder="email@ejemplo.com">
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="fContrasena" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label>Rol</label>
+        <select id="fRol">
+          <option value="lider">Líder</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+      <button class="submit-btn" id="btnCrear" onclick="crearLider()">Crear líder</button>
+      <div id="formMsg" class="msg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API_URL = 'https://factor-for-references-tiger.trycloudflare.com/api';
+  const lider = JSON.parse(sessionStorage.getItem('lider'));
+
+  if (!lider || lider.rol !== 'admin') {
+    window.location.href = 'index.html';
+    throw new Error('Sin permisos');
+  }
+
+  function initials(n) {
+    return n.trim().split(' ').slice(0, 2).map(w => w[0].toUpperCase()).join('');
+  }
+
+  async function loadLideres() {
+    const container = document.getElementById('lideresList');
+    try {
+      const res = await fetch(`${API_URL}/lideres?lider_id=${lider.id}`);
+      const data = await res.json();
+      if (!data.lideres || !data.lideres.length) {
+        container.innerHTML = '<div class="empty">No hay líderes registrados</div>';
+        return;
+      }
+      container.innerHTML = data.lideres.map(l => `
+        <div class="leader-card">
+          <div class="avatar" style="background:${l.rol === 'admin' ? 'var(--purple);color:#fff' : 'var(--purple-bg);color:var(--purple)'}">
+            ${initials(l.nombre)}
+          </div>
+          <div class="leader-info">
+            <div class="leader-name">${l.nombre}</div>
+            <div class="leader-sub">${l.usuario} · ${l.email}</div>
+            <div style="margin-top:4px">
+              <span class="badge ${l.rol === 'admin' ? 'badge-admin' : 'badge-lider'}">${l.rol}</span>
+              <span class="badge ${l.activo ? 'badge-activo' : 'badge-inactivo'}">${l.activo ? 'activo' : 'inactivo'}</span>
+            </div>
+          </div>
+          ${l.id !== lider.id ? `
+            <button class="action-btn ${l.activo ? '' : 'activate'}"
+              onclick="toggleActivo(${l.id}, ${l.activo ? 'true' : 'false'})">
+              ${l.activo ? 'Desactivar' : 'Activar'}
+            </button>` : ''}
+        </div>
+      `).join('');
+    } catch (err) {
+      container.innerHTML = '<div class="empty">Error al cargar líderes</div>';
+    }
+  }
+
+  async function toggleActivo(id, activo) {
+    if (!confirm(`¿${activo ? 'Desactivar' : 'Activar'} este líder?`)) return;
+    try {
+      const res = await fetch(`${API_URL}/lideres/${id}/activo`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lider_id: lider.id, activo: !activo })
+      });
+      if (res.ok) loadLideres();
+      else alert('Error al actualizar');
+    } catch (err) {
+      alert('Error de conexión');
+    }
+  }
+
+  async function crearLider() {
+    const nombre = document.getElementById('fNombre').value.trim();
+    const usuario = document.getElementById('fUsuario').value.trim();
+    const email = document.getElementById('fEmail').value.trim();
+    const contrasena = document.getElementById('fContrasena').value;
+    const rol = document.getElementById('fRol').value;
+    const msg = document.getElementById('formMsg');
+    const btn = document.getElementById('btnCrear');
+
+    msg.className = 'msg';
+    if (!nombre || !usuario || !email || !contrasena) {
+      msg.textContent = 'Todos los campos son requeridos';
+      msg.className = 'msg err';
+      return;
+    }
+    if (contrasena.length < 6) {
+      msg.textContent = 'La contraseña debe tener mínimo 6 caracteres';
+      msg.className = 'msg err';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Creando...';
+
+    try {
+      const res = await fetch(`${API_URL}/lideres`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lider_id: lider.id, nombre, usuario, email, contrasena, rol })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        msg.textContent = data.error || 'Error al crear';
+        msg.className = 'msg err';
+      } else {
+        msg.textContent = '✓ Líder creado exitosamente';
+        msg.className = 'msg ok';
+        document.getElementById('fNombre').value = '';
+        document.getElementById('fUsuario').value = '';
+        document.getElementById('fEmail').value = '';
+        document.getElementById('fContrasena').value = '';
+        document.getElementById('fRol').value = 'lider';
+        loadLideres();
+        setTimeout(() => { msg.className = 'msg'; }, 3000);
+      }
+    } catch (err) {
+      msg.textContent = 'Error de conexión';
+      msg.className = 'msg err';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Crear líder';
+    }
+  }
+
+  loadLideres();
+</script>
+</body>
+</html>

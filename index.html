@@ -250,45 +250,6 @@
 
       <div class="form-actions">
         <button type="submit" class="btn btn-login" id="btnLogin">Ingresar</button>
-        <button type="button" class="btn btn-signup" onclick="toggleForm()">Registrarse</button>
-      </div>
-
-      <div class="divider">o</div>
-      <button type="button" class="btn btn-demo" onclick="loginDemo()">Demo (usuario: demo)</button>
-    </form>
-
-    <!-- Formulario de Registro -->
-    <form class="signup-form" onsubmit="handleSignup(event)">
-      <div class="login-header">
-        <h1>Crear Cuenta</h1>
-        <p>Regístrate como líder</p>
-      </div>
-
-      <div class="form-group">
-        <label for="nombre">Nombre completo</label>
-        <input type="text" id="nombre" placeholder="Tu nombre" required>
-      </div>
-
-      <div class="form-group">
-        <label for="usuarioSignup">Usuario</label>
-        <input type="text" id="usuarioSignup" placeholder="Elige un usuario" required>
-      </div>
-
-      <div class="form-group">
-        <label for="email">Email</label>
-        <input type="email" id="email" placeholder="tu@email.com" required>
-      </div>
-
-      <div class="form-group">
-        <label for="contrasenaSignup">Contraseña</label>
-        <input type="password" id="contrasenaSignup" placeholder="Mínimo 6 caracteres" required>
-      </div>
-
-      <div id="signupMessage" class="message"></div>
-
-      <div class="form-actions">
-        <button type="submit" class="btn btn-login" id="btnSignup">Crear Cuenta</button>
-        <button type="button" class="btn btn-signup" onclick="toggleForm()">Volver a Login</button>
       </div>
     </form>
   </div>
@@ -296,13 +257,6 @@
 
 <script>
   const API_URL = 'https://factor-for-references-tiger.trycloudflare.com/api';
-
-  function toggleForm() {
-    document.querySelector('.login-form').classList.toggle('hide');
-    document.querySelector('.signup-form').classList.toggle('show');
-    document.getElementById('loginMessage').innerHTML = '';
-    document.getElementById('signupMessage').innerHTML = '';
-  }
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -350,67 +304,6 @@
     }
   }
 
-  async function handleSignup(e) {
-    e.preventDefault();
-    const nombre = document.getElementById('nombre').value;
-    const usuario = document.getElementById('usuarioSignup').value;
-    const email = document.getElementById('email').value;
-    const contrasena = document.getElementById('contrasenaSignup').value;
-    const btnSignup = document.getElementById('btnSignup');
-    const signupMsg = document.getElementById('signupMessage');
-
-    if (contrasena.length < 6) {
-      signupMsg.textContent = 'La contraseña debe tener mínimo 6 caracteres';
-      signupMsg.classList.remove('success');
-      signupMsg.classList.add('error');
-      return;
-    }
-
-    btnSignup.disabled = true;
-    btnSignup.innerHTML = '<span class="spinner"></span>Registrando...';
-
-    try {
-      const res = await fetch(API_URL + '/registro', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuario, email, nombre, contrasena })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        signupMsg.textContent = data.error || 'Error al registrar';
-        signupMsg.classList.remove('success');
-        signupMsg.classList.add('error');
-      } else {
-        signupMsg.textContent = '✓ Cuenta creada exitosamente. Ingresa con tu usuario.';
-        signupMsg.classList.remove('error');
-        signupMsg.classList.add('success');
-
-        setTimeout(() => {
-          toggleForm();
-          document.getElementById('usuario').value = usuario;
-          document.getElementById('usuario').focus();
-        }, 2000);
-      }
-    } catch (err) {
-      signupMsg.textContent = 'Error de conexión con el servidor';
-      signupMsg.classList.remove('success');
-      signupMsg.classList.add('error');
-      console.error(err);
-    } finally {
-      btnSignup.disabled = false;
-      btnSignup.innerHTML = 'Crear Cuenta';
-    }
-  }
-
-  async function loginDemo() {
-    document.getElementById('usuario').value = 'demo';
-    document.getElementById('contrasena').value = 'demo123';
-    setTimeout(() => {
-      document.querySelector('.login-form').dispatchEvent(new Event('submit'));
-    }, 200);
-  }
 </script>
 
 </body>
