@@ -164,10 +164,6 @@
     throw new Error('No autenticado');
   }
 
-  // Inicializar
-  document.getElementById('headerInfo').textContent = `${lider.nombre} • ${discipulos.length} discípulos`;
-  
-  // Inicializar people a partir de discipulos
   people = discipulos.map(d => ({ id: d.id, name: d.nombre, phone: d.celular || '', obs: '', status: 'a' }));
 
   function dateObj() { return new Date(selectedDate + 'T12:00:00'); }
@@ -216,6 +212,7 @@
   }
 
   function render() {
+    document.getElementById('headerInfo').textContent = `${lider.nombre} • ${people.length} discípulos`;
     const list = document.getElementById('list');
     if (!people.length) {
       list.innerHTML = '<div class="empty">📋 No hay discípulos agregados</div>';
