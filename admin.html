@@ -199,15 +199,18 @@
             </div>
           </div>
           <div class="card-actions">
-            <button class="action-btn edit" onclick="openEdit(${i})">Editar</button>
-            ${l.id !== lider.id ? `
-              <button class="action-btn ${l.activo ? '' : 'activate'}"
-                onclick="toggleActivo(${l.id}, ${l.activo ? 'true' : 'false'})">
-                ${l.activo ? 'Desactivar' : 'Activar'}
-              </button>` : ''}
+            <button class="action-btn edit" data-idx="${i}">Editar</button>
+            ${l.id !== lider.id ? `<button class="action-btn ${l.activo ? '' : 'activate'}" data-id="${l.id}" data-activo="${l.activo}">${l.activo ? 'Desactivar' : 'Activar'}</button>` : ''}
           </div>
         </div>
       `).join('');
+
+      container.querySelectorAll('[data-idx]').forEach(btn => {
+        btn.addEventListener('click', () => openEdit(parseInt(btn.dataset.idx)));
+      });
+      container.querySelectorAll('[data-id]').forEach(btn => {
+        btn.addEventListener('click', () => toggleActivo(parseInt(btn.dataset.id), btn.dataset.activo === 'true'));
+      });
     } catch (err) {
       container.innerHTML = '<div class="empty">Error al cargar líderes</div>';
     }
