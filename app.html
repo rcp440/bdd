@@ -163,7 +163,16 @@
     throw new Error('No autenticado');
   }
 
-  people = discipulos.map(d => ({ id: d.id, name: d.nombre, phone: d.celular || '', obs: '', status: 'a' }));
+  async function loadDiscipulos() {
+    try {
+      const res = await fetch(`${API_URL}/discipulos/${lider.id}`);
+      const data = await res.json();
+      people = (data.discipulos || []).map(d => ({ id: d.id, name: d.nombre, phone: d.celular || '', obs: '', status: 'a' }));
+    } catch (err) {
+      people = (JSON.parse(sessionStorage.getItem('discipulos')) || []).map(d => ({ id: d.id, name: d.nombre, phone: d.celular || '', obs: '', status: 'a' }));
+    }
+    await loadAsistencia();
+  }
 
   function dateObj() { return new Date(selectedDate + 'T12:00:00'); }
   function todayStr() { return dateObj().toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long', year:'numeric' }); }
@@ -435,8 +444,7 @@
     }
   }
 
-  loadAsistencia();
-  render();
+  loadDiscipulos();
 </script>
 
 </body>
