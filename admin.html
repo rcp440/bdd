@@ -78,6 +78,11 @@
   </div>
 
   <div class="section">
+    <div class="section-title">Discípulos registrados</div>
+    <div id="discipulosList"><div class="empty">Cargando...</div></div>
+  </div>
+
+  <div class="section">
     <div class="section-title">Nuevo líder</div>
     <div class="form-card">
       <div class="form-group">
@@ -153,6 +158,30 @@
   </div>
 </div>
 
+<!-- Modal de edición discípulo -->
+<div class="modal-overlay" id="modalDiscipulo" onclick="closeModalDisc(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Editar discípulo</span>
+      <button class="modal-close" onclick="closeModalDiscDirect()">×</button>
+    </div>
+    <div class="form-group">
+      <label>Nombre completo</label>
+      <input type="text" id="dNombre" maxlength="100">
+    </div>
+    <div class="form-group">
+      <label>Celular</label>
+      <input type="tel" id="dCelular" maxlength="20">
+    </div>
+    <div class="form-group">
+      <label>Fecha de nacimiento</label>
+      <input type="date" id="dFechaNac">
+    </div>
+    <button class="submit-btn" id="btnGuardarDisc" onclick="guardarEdicionDisc()">Guardar cambios</button>
+    <div id="editDiscMsg" class="msg"></div>
+  </div>
+</div>
+
 <script>
   const API_URL = 'https://factor-for-references-tiger.trycloudflare.com/api';
   const lider = JSON.parse(sessionStorage.getItem('lider'));
@@ -164,6 +193,8 @@
 
   let editingId = null;
   let lideresCached = [];
+  let editingDiscId = null;
+  let discipulosCached = [];
 
   function fmtFecha(iso) {
     if (!iso) return '';
@@ -362,7 +393,125 @@
     }
   }
 
+  async function loadDiscipulos() {
+    const container = document.getElementById('discipulosList');
+    try {
+      const res = await fetch(`${API_URL}/admin/discipulos?lider_id=${lider.id}`);
+      const data = await res.json();
+      if (!data.discipulos || !data.discipulos.length) {
+        container.innerHTML = '<div class="empty">No hay discípulos registrados</div>';
+        return;
+      }
+      discipulosCached = data.discipulos;
+      container.innerHTML = data.discipulos.map((d, i) => `
+        <div class="leader-card">
+          <div class="avatar" style="background:var(--green-bg);color:var(--green)">
+            ${initials(d.nombre)}
+          </div>
+          <div class="leader-info">
+            <div class="leader-name">${d.nombre}</div>
+            <div class="leader-sub">${d.celular || '—'}${d.fecha_nacimiento ? ' · ' + fmtFecha(d.fecha_nacimiento) : ''}</div>
+            <div style="margin-top:4px">
+              <span class="badge badge-lider">${d.lider_nombre}</span>
+              <span class="badge ${d.activo ? 'badge-activo' : 'badge-inactivo'}">${d.activo ? 'activo' : 'inactivo'}</span>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button class="action-btn edit" data-disc-idx="${i}">Editar</button>
+            <button class="action-btn ${d.activo ? '' : 'activate'}" data-disc-id="${d.id}" data-disc-activo="${d.activo}">${d.activo ? 'Dar de baja' : 'Activar'}</button>
+          </div>
+        </div>
+      `).join('');
+
+      container.querySelectorAll('[data-disc-idx]').forEach(btn => {
+        btn.addEventListener('click', () => openEditDisc(parseInt(btn.dataset.discIdx)));
+      });
+      container.querySelectorAll('[data-disc-id]').forEach(btn => {
+        btn.addEventListener('click', () => toggleActivoDisc(parseInt(btn.dataset.discId), btn.dataset.discActivo === 'true'));
+      });
+    } catch (err) {
+      container.innerHTML = '<div class="empty">Error al cargar discípulos</div>';
+    }
+  }
+
+  function openEditDisc(idx) {
+    const d = discipulosCached[idx];
+    editingDiscId = d.id;
+    document.getElementById('dNombre').value = d.nombre;
+    document.getElementById('dCelular').value = d.celular || '';
+    document.getElementById('dFechaNac').value = d.fecha_nacimiento || '';
+    document.getElementById('editDiscMsg').className = 'msg';
+    document.getElementById('modalDiscipulo').classList.add('open');
+  }
+
+  function closeModalDiscDirect() {
+    document.getElementById('modalDiscipulo').classList.remove('open');
+    editingDiscId = null;
+  }
+
+  function closeModalDisc(e) {
+    if (e.target === document.getElementById('modalDiscipulo')) closeModalDiscDirect();
+  }
+
+  async function guardarEdicionDisc() {
+    const nombre = document.getElementById('dNombre').value.trim();
+    const celular = document.getElementById('dCelular').value.trim();
+    const fechaNac = document.getElementById('dFechaNac').value;
+    const msg = document.getElementById('editDiscMsg');
+    const btn = document.getElementById('btnGuardarDisc');
+
+    msg.className = 'msg';
+    if (!nombre) {
+      msg.textContent = 'El nombre es requerido';
+      msg.className = 'msg err';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+
+    try {
+      const res = await fetch(`${API_URL}/discipulos/${editingDiscId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lider_id: lider.id, nombre, celular, fecha_nacimiento: fechaNac || null })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        msg.textContent = data.error || 'Error al guardar';
+        msg.className = 'msg err';
+      } else {
+        msg.textContent = '✓ Cambios guardados';
+        msg.className = 'msg ok';
+        loadDiscipulos();
+        setTimeout(() => closeModalDiscDirect(), 1500);
+      }
+    } catch (err) {
+      msg.textContent = 'Error de conexión';
+      msg.className = 'msg err';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Guardar cambios';
+    }
+  }
+
+  async function toggleActivoDisc(id, activo) {
+    if (!confirm(`¿${activo ? 'Dar de baja' : 'Activar'} este discípulo?`)) return;
+    try {
+      const res = await fetch(`${API_URL}/discipulos/${id}/activo`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lider_id: lider.id, activo: !activo })
+      });
+      if (res.ok) loadDiscipulos();
+      else alert('Error al actualizar');
+    } catch (err) {
+      alert('Error de conexión');
+    }
+  }
+
   loadLideres();
+  loadDiscipulos();
 </script>
 </body>
 </html>

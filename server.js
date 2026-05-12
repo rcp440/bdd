@@ -414,6 +414,72 @@ app.patch('/api/lideres/:id/activo', async (req, res) => {
   }
 });
 
+// ---- ADMIN: LISTAR TODOS LOS DISCÍPULOS ----
+app.get('/api/admin/discipulos', async (req, res) => {
+  try {
+    const lider_id = parseInt(req.query.lider_id);
+    const chk = pool.request();
+    chk.input('id', sql.Int, lider_id);
+    const r = await chk.query('SELECT rol FROM Lideres WHERE id = @id AND activo = 1');
+    if (r.recordset[0]?.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    const result = await pool.request().query(
+      `SELECT d.id, d.nombre, d.celular, d.lider_id, d.activo,
+              CONVERT(VARCHAR(10), d.fecha_nacimiento, 23) AS fecha_nacimiento,
+              l.nombre AS lider_nombre
+       FROM Discipulos d
+       JOIN Lideres l ON d.lider_id = l.id
+       ORDER BY l.nombre, d.nombre`
+    );
+    res.json({ discipulos: result.recordset });
+  } catch (err) {
+    console.error('Error listando discípulos:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
+// ---- ADMIN: EDITAR DISCÍPULO ----
+app.put('/api/discipulos/:id', async (req, res) => {
+  try {
+    const { lider_id, nombre, celular, fecha_nacimiento } = req.body;
+    if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
+    const chk = pool.request();
+    chk.input('id', sql.Int, parseInt(lider_id));
+    const r = await chk.query('SELECT rol FROM Lideres WHERE id = @id AND activo = 1');
+    if (r.recordset[0]?.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    const req2 = pool.request();
+    req2.input('id', sql.Int, parseInt(req.params.id));
+    req2.input('nombre', sql.VarChar, nombre);
+    req2.input('celular', sql.VarChar, celular || '');
+    req2.input('fecha_nacimiento', sql.Date, fecha_nacimiento || null);
+    await req2.query(
+      `UPDATE Discipulos SET nombre=@nombre, celular=@celular, fecha_nacimiento=@fecha_nacimiento WHERE id=@id`
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error editando discípulo:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
+// ---- ADMIN: TOGGLE ACTIVO DISCÍPULO ----
+app.patch('/api/discipulos/:id/activo', async (req, res) => {
+  try {
+    const { lider_id, activo } = req.body;
+    const chk = pool.request();
+    chk.input('id', sql.Int, parseInt(lider_id));
+    const r = await chk.query('SELECT rol FROM Lideres WHERE id = @id AND activo = 1');
+    if (r.recordset[0]?.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    const req2 = pool.request();
+    req2.input('id', sql.Int, parseInt(req.params.id));
+    req2.input('activo', sql.Bit, activo ? 1 : 0);
+    await req2.query('UPDATE Discipulos SET activo = @activo WHERE id = @id');
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error toggle activo discípulo:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
 // ---- STATS: MENSUAL ----
 app.get('/api/stats/mensual/:lider_id/:anio/:mes', async (req, res) => {
   try {

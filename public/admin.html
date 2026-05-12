@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Administración - Asistencia</title>
+  <title>AdministraciÃ³n - Asistencia</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -67,18 +67,23 @@
 <div class="app">
   <div class="header">
     <div class="header-top">
-      <h1>Admin <span>·</span> Líderes</h1>
-      <button class="back-btn" onclick="window.location.href='/app.html'">← Volver</button>
+      <h1>Admin <span>Â·</span> LÃ­deres</h1>
+      <button class="back-btn" onclick="window.location.href='app.html'">â† Volver</button>
     </div>
   </div>
 
   <div class="section">
-    <div class="section-title">Líderes registrados</div>
+    <div class="section-title">LÃ­deres registrados</div>
     <div id="lideresList"><div class="empty">Cargando...</div></div>
   </div>
 
   <div class="section">
-    <div class="section-title">Nuevo líder</div>
+    <div class="section-title">DiscÃ­pulos registrados</div>
+    <div id="discipulosList"><div class="empty">Cargando...</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Nuevo lÃ­der</div>
     <div class="form-card">
       <div class="form-group">
         <label>Nombre completo</label>
@@ -93,8 +98,8 @@
         <input type="email" id="fEmail" placeholder="email@ejemplo.com">
       </div>
       <div class="form-group">
-        <label>Contraseña</label>
-        <input type="password" id="fContrasena" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+        <label>ContraseÃ±a</label>
+        <input type="password" id="fContrasena" placeholder="MÃ­nimo 6 caracteres" autocomplete="new-password">
       </div>
       <div class="form-group">
         <label>Fecha de nacimiento</label>
@@ -103,22 +108,22 @@
       <div class="form-group">
         <label>Rol</label>
         <select id="fRol">
-          <option value="lider">Líder</option>
+          <option value="lider">LÃ­der</option>
           <option value="admin">Administrador</option>
         </select>
       </div>
-      <button class="submit-btn" id="btnCrear" onclick="crearLider()">Crear líder</button>
+      <button class="submit-btn" id="btnCrear" onclick="crearLider()">Crear lÃ­der</button>
       <div id="formMsg" class="msg"></div>
     </div>
   </div>
 </div>
 
-<!-- Modal de edición -->
+<!-- Modal de ediciÃ³n -->
 <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-title">Editar líder</span>
-      <button class="modal-close" onclick="closeModalDirect()">×</button>
+      <span class="modal-title">Editar lÃ­der</span>
+      <button class="modal-close" onclick="closeModalDirect()">Ã—</button>
     </div>
     <div class="form-group">
       <label>Nombre completo</label>
@@ -135,7 +140,7 @@
     <div class="form-group">
       <label>Rol</label>
       <select id="eRol">
-        <option value="lider">Líder</option>
+        <option value="lider">LÃ­der</option>
         <option value="admin">Administrador</option>
       </select>
     </div>
@@ -144,12 +149,36 @@
       <input type="date" id="eFechaNac">
     </div>
     <div class="form-group">
-      <label>Nueva contraseña</label>
-      <input type="password" id="eContrasena" placeholder="Dejar vacío para no cambiar" autocomplete="new-password">
-      <div class="form-hint">Mínimo 6 caracteres si se ingresa</div>
+      <label>Nueva contraseÃ±a</label>
+      <input type="password" id="eContrasena" placeholder="Dejar vacÃ­o para no cambiar" autocomplete="new-password">
+      <div class="form-hint">MÃ­nimo 6 caracteres si se ingresa</div>
     </div>
     <button class="submit-btn" id="btnGuardar" onclick="guardarEdicion()">Guardar cambios</button>
     <div id="editMsg" class="msg"></div>
+  </div>
+</div>
+
+<!-- Modal de ediciÃ³n discÃ­pulo -->
+<div class="modal-overlay" id="modalDiscipulo" onclick="closeModalDisc(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Editar discÃ­pulo</span>
+      <button class="modal-close" onclick="closeModalDiscDirect()">Ã—</button>
+    </div>
+    <div class="form-group">
+      <label>Nombre completo</label>
+      <input type="text" id="dNombre" maxlength="100">
+    </div>
+    <div class="form-group">
+      <label>Celular</label>
+      <input type="tel" id="dCelular" maxlength="20">
+    </div>
+    <div class="form-group">
+      <label>Fecha de nacimiento</label>
+      <input type="date" id="dFechaNac">
+    </div>
+    <button class="submit-btn" id="btnGuardarDisc" onclick="guardarEdicionDisc()">Guardar cambios</button>
+    <div id="editDiscMsg" class="msg"></div>
   </div>
 </div>
 
@@ -164,6 +193,8 @@
 
   let editingId = null;
   let lideresCached = [];
+  let editingDiscId = null;
+  let discipulosCached = [];
 
   function fmtFecha(iso) {
     if (!iso) return '';
@@ -181,7 +212,7 @@
       const res = await fetch(`${API_URL}/lideres?lider_id=${lider.id}`);
       const data = await res.json();
       if (!data.lideres || !data.lideres.length) {
-        container.innerHTML = '<div class="empty">No hay líderes registrados</div>';
+        container.innerHTML = '<div class="empty">No hay lÃ­deres registrados</div>';
         return;
       }
       lideresCached = data.lideres;
@@ -192,7 +223,7 @@
           </div>
           <div class="leader-info">
             <div class="leader-name">${l.nombre}</div>
-            <div class="leader-sub">${l.usuario} · ${l.email}${l.fecha_nacimiento ? ' · ' + fmtFecha(l.fecha_nacimiento) : ''}</div>
+            <div class="leader-sub">${l.usuario} Â· ${l.email}${l.fecha_nacimiento ? ' Â· ' + fmtFecha(l.fecha_nacimiento) : ''}</div>
             <div style="margin-top:4px">
               <span class="badge ${l.rol === 'admin' ? 'badge-admin' : 'badge-lider'}">${l.rol}</span>
               <span class="badge ${l.activo ? 'badge-activo' : 'badge-inactivo'}">${l.activo ? 'activo' : 'inactivo'}</span>
@@ -212,7 +243,7 @@
         btn.addEventListener('click', () => toggleActivo(parseInt(btn.dataset.id), btn.dataset.activo === 'true'));
       });
     } catch (err) {
-      container.innerHTML = '<div class="empty">Error al cargar líderes</div>';
+      container.innerHTML = '<div class="empty">Error al cargar lÃ­deres</div>';
     }
   }
 
@@ -254,7 +285,7 @@
       return;
     }
     if (contrasena && contrasena.length < 6) {
-      msg.textContent = 'La contraseña debe tener mínimo 6 caracteres';
+      msg.textContent = 'La contraseÃ±a debe tener mÃ­nimo 6 caracteres';
       msg.className = 'msg err';
       return;
     }
@@ -277,13 +308,13 @@
         msg.textContent = data.error || 'Error al guardar';
         msg.className = 'msg err';
       } else {
-        msg.textContent = '✓ Cambios guardados';
+        msg.textContent = 'âœ“ Cambios guardados';
         msg.className = 'msg ok';
         loadLideres();
         setTimeout(() => closeModalDirect(), 1500);
       }
     } catch (err) {
-      msg.textContent = 'Error de conexión';
+      msg.textContent = 'Error de conexiÃ³n';
       msg.className = 'msg err';
     } finally {
       btn.disabled = false;
@@ -292,7 +323,7 @@
   }
 
   async function toggleActivo(id, activo) {
-    if (!confirm(`¿${activo ? 'Desactivar' : 'Activar'} este líder?`)) return;
+    if (!confirm(`Â¿${activo ? 'Desactivar' : 'Activar'} este lÃ­der?`)) return;
     try {
       const res = await fetch(`${API_URL}/lideres/${id}/activo`, {
         method: 'PATCH',
@@ -302,7 +333,7 @@
       if (res.ok) loadLideres();
       else alert('Error al actualizar');
     } catch (err) {
-      alert('Error de conexión');
+      alert('Error de conexiÃ³n');
     }
   }
 
@@ -322,7 +353,7 @@
       return;
     }
     if (contrasena.length < 6) {
-      msg.textContent = 'La contraseña debe tener mínimo 6 caracteres';
+      msg.textContent = 'La contraseÃ±a debe tener mÃ­nimo 6 caracteres';
       msg.className = 'msg err';
       return;
     }
@@ -342,7 +373,7 @@
         msg.textContent = data.error || 'Error al crear';
         msg.className = 'msg err';
       } else {
-        msg.textContent = '✓ Líder creado exitosamente';
+        msg.textContent = 'âœ“ LÃ­der creado exitosamente';
         msg.className = 'msg ok';
         document.getElementById('fNombre').value = '';
         document.getElementById('fUsuario').value = '';
@@ -354,15 +385,133 @@
         setTimeout(() => { msg.className = 'msg'; }, 3000);
       }
     } catch (err) {
-      msg.textContent = 'Error de conexión';
+      msg.textContent = 'Error de conexiÃ³n';
       msg.className = 'msg err';
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Crear líder';
+      btn.textContent = 'Crear lÃ­der';
+    }
+  }
+
+  async function loadDiscipulos() {
+    const container = document.getElementById('discipulosList');
+    try {
+      const res = await fetch(`${API_URL}/admin/discipulos?lider_id=${lider.id}`);
+      const data = await res.json();
+      if (!data.discipulos || !data.discipulos.length) {
+        container.innerHTML = '<div class="empty">No hay discÃ­pulos registrados</div>';
+        return;
+      }
+      discipulosCached = data.discipulos;
+      container.innerHTML = data.discipulos.map((d, i) => `
+        <div class="leader-card">
+          <div class="avatar" style="background:var(--green-bg);color:var(--green)">
+            ${initials(d.nombre)}
+          </div>
+          <div class="leader-info">
+            <div class="leader-name">${d.nombre}</div>
+            <div class="leader-sub">${d.celular || 'â€”'}${d.fecha_nacimiento ? ' Â· ' + fmtFecha(d.fecha_nacimiento) : ''}</div>
+            <div style="margin-top:4px">
+              <span class="badge badge-lider">${d.lider_nombre}</span>
+              <span class="badge ${d.activo ? 'badge-activo' : 'badge-inactivo'}">${d.activo ? 'activo' : 'inactivo'}</span>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button class="action-btn edit" data-disc-idx="${i}">Editar</button>
+            <button class="action-btn ${d.activo ? '' : 'activate'}" data-disc-id="${d.id}" data-disc-activo="${d.activo}">${d.activo ? 'Dar de baja' : 'Activar'}</button>
+          </div>
+        </div>
+      `).join('');
+
+      container.querySelectorAll('[data-disc-idx]').forEach(btn => {
+        btn.addEventListener('click', () => openEditDisc(parseInt(btn.dataset.discIdx)));
+      });
+      container.querySelectorAll('[data-disc-id]').forEach(btn => {
+        btn.addEventListener('click', () => toggleActivoDisc(parseInt(btn.dataset.discId), btn.dataset.discActivo === 'true'));
+      });
+    } catch (err) {
+      container.innerHTML = '<div class="empty">Error al cargar discÃ­pulos</div>';
+    }
+  }
+
+  function openEditDisc(idx) {
+    const d = discipulosCached[idx];
+    editingDiscId = d.id;
+    document.getElementById('dNombre').value = d.nombre;
+    document.getElementById('dCelular').value = d.celular || '';
+    document.getElementById('dFechaNac').value = d.fecha_nacimiento || '';
+    document.getElementById('editDiscMsg').className = 'msg';
+    document.getElementById('modalDiscipulo').classList.add('open');
+  }
+
+  function closeModalDiscDirect() {
+    document.getElementById('modalDiscipulo').classList.remove('open');
+    editingDiscId = null;
+  }
+
+  function closeModalDisc(e) {
+    if (e.target === document.getElementById('modalDiscipulo')) closeModalDiscDirect();
+  }
+
+  async function guardarEdicionDisc() {
+    const nombre = document.getElementById('dNombre').value.trim();
+    const celular = document.getElementById('dCelular').value.trim();
+    const fechaNac = document.getElementById('dFechaNac').value;
+    const msg = document.getElementById('editDiscMsg');
+    const btn = document.getElementById('btnGuardarDisc');
+
+    msg.className = 'msg';
+    if (!nombre) {
+      msg.textContent = 'El nombre es requerido';
+      msg.className = 'msg err';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+
+    try {
+      const res = await fetch(`${API_URL}/discipulos/${editingDiscId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lider_id: lider.id, nombre, celular, fecha_nacimiento: fechaNac || null })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        msg.textContent = data.error || 'Error al guardar';
+        msg.className = 'msg err';
+      } else {
+        msg.textContent = 'âœ“ Cambios guardados';
+        msg.className = 'msg ok';
+        loadDiscipulos();
+        setTimeout(() => closeModalDiscDirect(), 1500);
+      }
+    } catch (err) {
+      msg.textContent = 'Error de conexiÃ³n';
+      msg.className = 'msg err';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Guardar cambios';
+    }
+  }
+
+  async function toggleActivoDisc(id, activo) {
+    if (!confirm(`Â¿${activo ? 'Dar de baja' : 'Activar'} este discÃ­pulo?`)) return;
+    try {
+      const res = await fetch(`${API_URL}/discipulos/${id}/activo`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lider_id: lider.id, activo: !activo })
+      });
+      if (res.ok) loadDiscipulos();
+      else alert('Error al actualizar');
+    } catch (err) {
+      alert('Error de conexiÃ³n');
     }
   }
 
   loadLideres();
+  loadDiscipulos();
 </script>
 </body>
 </html>
