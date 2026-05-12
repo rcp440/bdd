@@ -156,7 +156,7 @@
   let lider = JSON.parse(sessionStorage.getItem('lider'));
   let discipulos = JSON.parse(sessionStorage.getItem('discipulos')) || [];
   let people = [];
-  let selectedDate = localStorage.getItem('selectedDate') || new Date().toISOString().slice(0, 10);
+  let selectedDate = new Date().toISOString().slice(0, 10);
 
   // Verificar login
   if (!lider) {
@@ -176,7 +176,6 @@
 
   function setDate(val) {
     selectedDate = val;
-    localStorage.setItem('selectedDate', val);
     document.getElementById('date-pill').textContent = todayStr();
     loadAsistencia();
   }
@@ -191,10 +190,10 @@
   setDate(selectedDate);
 
   async function loadAsistencia() {
+    people.forEach(p => { p.status = 'a'; p.obs = ''; });
     try {
       const res = await fetch(`${API_URL}/asistencia/${lider.id}/${selectedDate}`);
       const data = await res.json();
-      
       if (data.registros && data.registros.length > 0) {
         data.registros.forEach(reg => {
           const person = people.find(p => p.id === reg.discipulo_id);
@@ -208,6 +207,7 @@
       render();
     } catch (err) {
       console.error('Error cargando asistencia:', err);
+      render();
     }
   }
 
