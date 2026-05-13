@@ -6,22 +6,56 @@
 $logFile   = "$env:TEMP\cloudflared_tunnel.log"
 $repoDir   = $PSScriptRoot
 $archivos  = @("index.html", "app.html", "admin.html", "stats.html")
-$timeoutSeg = 30
+$timeoutSeg = 40
+
+Write-Host ""
+Write-Host "=== TUNNEL CLOUDFLARE ===" -ForegroundColor Cyan
+
+# Buscar cloudflared: PATH primero, luego ubicaciones comunes
+$cloudflaredExe = $null
+$ubicacionesComunes = @(
+    "$env:USERPROFILE\Desktop\cloudflared.exe",
+    "$env:USERPROFILE\Downloads\cloudflared.exe",
+    "C:\cloudflared\cloudflared.exe",
+    "C:\tools\cloudflared.exe",
+    "C:\Program Files\cloudflared\cloudflared.exe"
+)
+
+if (Get-Command cloudflared -ErrorAction SilentlyContinue) {
+    $cloudflaredExe = "cloudflared"
+} else {
+    foreach ($ruta in $ubicacionesComunes) {
+        if (Test-Path $ruta) { $cloudflaredExe = $ruta; break }
+    }
+}
+
+if (-not $cloudflaredExe) {
+    Write-Host ""
+    Write-Host "[ERROR] No se encontro cloudflared.exe" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "  Descargalo desde:" -ForegroundColor Yellow
+    Write-Host "  https://github.com/cloudflare/cloudflared/releases/latest" -ForegroundColor Cyan
+    Write-Host "  -> Bajar: cloudflared-windows-amd64.exe" -ForegroundColor Cyan
+    Write-Host "  -> Renombrarlo a cloudflared.exe" -ForegroundColor Cyan
+    Write-Host "  -> Copiarlo al Escritorio o a C:\cloudflared\" -ForegroundColor Cyan
+    Write-Host ""
+    exit 1
+}
+
+Write-Host "Usando: $cloudflaredExe" -ForegroundColor DarkGray
+Write-Host "Iniciando cloudflared..." -ForegroundColor Yellow
 
 # Limpiar log anterior
 if (Test-Path $logFile) { Remove-Item $logFile -Force }
 
-Write-Host ""
-Write-Host "=== TUNNEL CLOUDFLARE ===" -ForegroundColor Cyan
-Write-Host "Iniciando cloudflared..." -ForegroundColor Yellow
-
-# Arrancar cloudflared en background capturando stderr (donde aparece la URL)
-$proc = Start-Process cloudflared `
+# Arrancar cloudflared en background capturando stderr y stdout (la URL puede aparecer en cualquiera)
+$proc = Start-Process $cloudflaredExe `
     -ArgumentList "tunnel --url http://localhost:3000" `
     -RedirectStandardError $logFile `
+    -RedirectStandardOutput "$logFile.stdout" `
     -PassThru -NoNewWindow
 
-# Esperar hasta que aparezca la URL en el log
+# Esperar hasta que aparezca la URL en el log (stderr o stdout)
 $url = $null
 $elapsed = 0
 Write-Host "Esperando URL" -NoNewline
@@ -29,10 +63,14 @@ while (-not $url -and $elapsed -lt $timeoutSeg) {
     Start-Sleep -Seconds 1
     $elapsed++
     Write-Host "." -NoNewline
-    if (Test-Path $logFile) {
-        $txt = Get-Content $logFile -Raw -ErrorAction SilentlyContinue
-        $m = [regex]::Match($txt, "https://[a-z0-9\-]+\.trycloudflare\.com")
-        if ($m.Success) { $url = $m.Value }
+    foreach ($f in @($logFile, "$logFile.stdout")) {
+        if (Test-Path $f) {
+            $txt = Get-Content $f -Raw -ErrorAction SilentlyContinue
+            if ($txt) {
+                $m = [regex]::Match($txt, "https://[a-z0-9\-]+\.trycloudflare\.com")
+                if ($m.Success) { $url = $m.Value; break }
+            }
+        }
     }
 }
 Write-Host ""
