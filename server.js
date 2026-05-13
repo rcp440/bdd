@@ -53,7 +53,9 @@ app.post('/api/login', async (req, res) => {
     const request = pool.request();
     request.input('usuario', sql.VarChar, usuario);
     const result = await request.query(
-      'SELECT id, usuario, email, nombre, contrasena, rol FROM Lideres WHERE usuario = @usuario AND activo = 1'
+      `SELECT id, usuario, email, nombre, celular, contrasena, rol,
+              CONVERT(VARCHAR(10), fecha_nacimiento, 23) AS fecha_nacimiento
+       FROM Lideres WHERE usuario = @usuario AND activo = 1`
     );
 
     if (result.recordset.length === 0) {
@@ -82,6 +84,8 @@ app.post('/api/login', async (req, res) => {
         usuario: lider.usuario,
         nombre: lider.nombre,
         email: lider.email,
+        celular: lider.celular || '',
+        fecha_nacimiento: lider.fecha_nacimiento || '',
         rol: lider.rol || 'lider'
       },
       discipulos: discipulos.recordset
@@ -410,6 +414,36 @@ app.patch('/api/lideres/:id/activo', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('Error toggle activo:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
+// ---- EDITAR PERFIL PROPIO (cualquier líder) ----
+app.put('/api/lideres/:id/perfil', async (req, res) => {
+  try {
+    const { lider_id, nombre, email, celular, fecha_nacimiento } = req.body;
+    if (parseInt(req.params.id) !== parseInt(lider_id)) {
+      return res.status(403).json({ error: 'Sin permisos' });
+    }
+    if (!nombre || !email) {
+      return res.status(400).json({ error: 'Nombre y email son requeridos' });
+    }
+    const chk = pool.request();
+    chk.input('id', sql.Int, parseInt(lider_id));
+    const r = await chk.query('SELECT id FROM Lideres WHERE id = @id AND activo = 1');
+    if (!r.recordset.length) return res.status(403).json({ error: 'Sin permisos' });
+    const req2 = pool.request();
+    req2.input('id', sql.Int, parseInt(req.params.id));
+    req2.input('nombre', sql.VarChar, nombre);
+    req2.input('email', sql.VarChar, email);
+    req2.input('celular', sql.VarChar, celular || '');
+    req2.input('fecha_nacimiento', sql.Date, fecha_nacimiento || null);
+    await req2.query(
+      `UPDATE Lideres SET nombre=@nombre, email=@email, celular=@celular, fecha_nacimiento=@fecha_nacimiento WHERE id=@id`
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error editando perfil:', err);
     res.status(500).json({ error: 'Error en servidor' });
   }
 });

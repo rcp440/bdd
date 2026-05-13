@@ -124,6 +124,7 @@
     .modal-msg.ok { display: block; background: var(--green-bg); color: var(--green); }
     .modal-msg.err { display: block; background: var(--red-bg); color: var(--red); }
     .edit-disc-btn { border: 1px solid var(--purple-bg); border-radius: var(--radius-sm); width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; background: var(--purple-bg); color: var(--purple); flex-shrink: 0; }
+    .lider-name-btn { background: none; border: none; cursor: pointer; font-size: inherit; font-family: inherit; color: var(--purple); font-weight: 600; padding: 0; text-decoration: underline dotted; }
   </style>
 </head>
 <body>
@@ -178,6 +179,33 @@
 
 <div class="toast" id="toast"></div>
 <div id="printReport"></div>
+
+<div class="modal-overlay" id="modalEditPerfil" onclick="if(event.target===this)closePerfilModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Mi perfil</span>
+      <button class="modal-close" onclick="closePerfilModal()">×</button>
+    </div>
+    <div class="modal-fg">
+      <label>Nombre completo</label>
+      <input type="text" id="pfNombre" maxlength="100">
+    </div>
+    <div class="modal-fg">
+      <label>Email</label>
+      <input type="email" id="pfEmail" maxlength="100">
+    </div>
+    <div class="modal-fg">
+      <label>Celular</label>
+      <input type="tel" id="pfCelular" maxlength="20">
+    </div>
+    <div class="modal-fg">
+      <label>Fecha de nacimiento</label>
+      <input type="date" id="pfFechaNac">
+    </div>
+    <button class="modal-save-btn" id="btnGuardarPerfil" onclick="guardarPerfil()">Guardar cambios</button>
+    <div class="modal-msg" id="perfilMsg"></div>
+  </div>
+</div>
 
 <div class="modal-overlay" id="modalEditDisc" onclick="if(event.target===this)closeEditDiscModal()">
   <div class="modal">
@@ -298,7 +326,7 @@
   }
 
   function render() {
-    document.getElementById('headerInfo').textContent = `${lider.nombre} • ${people.length} discípulos`;
+    document.getElementById('headerInfo').innerHTML = `<button class="lider-name-btn" onclick="openPerfilModal()">${lider.nombre}</button> • ${people.length} discípulos`;
     const list = document.getElementById('list');
     if (!people.length) {
       list.innerHTML = '<div class="empty">📋 No hay discípulos agregados</div>';
@@ -536,6 +564,66 @@
     if (confirm('¿Estás seguro de que deseas salir?')) {
       sessionStorage.clear();
       window.location.href = 'index.html';
+    }
+  }
+
+  function openPerfilModal() {
+    document.getElementById('pfNombre').value = lider.nombre || '';
+    document.getElementById('pfEmail').value = lider.email || '';
+    document.getElementById('pfCelular').value = lider.celular || '';
+    document.getElementById('pfFechaNac').value = lider.fecha_nacimiento || '';
+    document.getElementById('perfilMsg').className = 'modal-msg';
+    document.getElementById('modalEditPerfil').classList.add('open');
+  }
+
+  function closePerfilModal() {
+    document.getElementById('modalEditPerfil').classList.remove('open');
+  }
+
+  async function guardarPerfil() {
+    const nombre = document.getElementById('pfNombre').value.trim();
+    const email = document.getElementById('pfEmail').value.trim();
+    const celular = document.getElementById('pfCelular').value.trim();
+    const fechaNac = document.getElementById('pfFechaNac').value;
+    const msg = document.getElementById('perfilMsg');
+    const btn = document.getElementById('btnGuardarPerfil');
+
+    msg.className = 'modal-msg';
+    if (!nombre || !email) {
+      msg.textContent = 'Nombre y email son requeridos';
+      msg.className = 'modal-msg err';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+    try {
+      const res = await fetch(`${API_URL}/lideres/${lider.id}/perfil`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lider_id: lider.id, nombre, email, celular, fecha_nacimiento: fechaNac || null })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        msg.textContent = data.error || 'Error al guardar';
+        msg.className = 'modal-msg err';
+      } else {
+        lider.nombre = nombre;
+        lider.email = email;
+        lider.celular = celular;
+        lider.fecha_nacimiento = fechaNac;
+        sessionStorage.setItem('lider', JSON.stringify(lider));
+        msg.textContent = '✓ Perfil actualizado';
+        msg.className = 'modal-msg ok';
+        render();
+        setTimeout(() => closePerfilModal(), 1000);
+      }
+    } catch (err) {
+      msg.textContent = 'Error de conexión';
+      msg.className = 'modal-msg err';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Guardar cambios';
     }
   }
 
