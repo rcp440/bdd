@@ -256,10 +256,11 @@
       return `<tr><td class="cell-name">${d.nombre}</td>${cells}<td class="cell-total">${pres}/${total}</td></tr>`;
     }).join('');
 
-    const obsSection = reuniones && reuniones.length ? `
-      <div class="section-label" style="margin-top:8px">Observaciones del mes</div>
+    const reunionesConObs = (reuniones || []).filter(r => r.observacion && r.observacion.trim());
+    const obsSection = reunionesConObs.length ? `
+      <div class="section-label" style="margin-top:8px">Observaciones de reuniones</div>
       <div class="obs-list">
-        ${reuniones.map(r => `
+        ${reunionesConObs.map(r => `
           <div class="obs-card">
             <div class="obs-date">${fmtLong(r.fecha)}</div>
             <div class="obs-text">${r.observacion}</div>
@@ -350,6 +351,8 @@
     const { asistencia, reuniones, lider: lt } = data;
     const { fechas, disciples } = buildMatrix(asistencia);
 
+    const reunionesConObs = (reuniones || []).filter(r => r.observacion && r.observacion.trim());
+
     const headers = fechas.map(f =>
       `<th style="padding:5px 6px;border:1px solid #ddd;font-size:10px;font-weight:600">${fmtShort(f)}</th>`
     ).join('');
@@ -371,44 +374,44 @@
       </tr>`;
     }).join('');
 
-    const obsHtml = reuniones && reuniones.length ? `
-      <div style="margin-top:24px;border-top:2px solid #5B4FD4;padding-top:14px">
-        <div style="font-size:11px;font-weight:700;color:#5B4FD4;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">Observaciones del mes</div>
-        ${reuniones.map(r => `
-          <div style="margin-bottom:10px">
-            <div style="font-size:11px;font-weight:600;color:#555;margin-bottom:2px">${fmtLong(r.fecha)}</div>
-            <div style="font-size:12px;color:#333;padding-left:8px;border-left:3px solid #5B4FD4;line-height:1.5">${r.observacion}</div>
+    const obsHtml = reunionesConObs.length ? `
+      <div style="margin-top:20px;border-top:2px solid #5B4FD4;padding-top:14px">
+        <div style="font-size:11px;font-weight:700;color:#5B4FD4;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px">Observaciones de reuniones</div>
+        ${reunionesConObs.map(r => `
+          <div style="margin-bottom:10px;display:flex;gap:16px;align-items:flex-start">
+            <div style="font-size:11px;font-weight:600;color:#555;white-space:nowrap;min-width:110px;padding-top:2px">${fmtLong(r.fecha)}</div>
+            <div style="font-size:12px;color:#333;border-left:3px solid #5B4FD4;padding-left:10px;line-height:1.5;flex:1">${r.observacion}</div>
           </div>`).join('')}
       </div>` : '';
 
     const report = document.getElementById('printReport');
     report.innerHTML = `
-      <div style="font-family:Arial,sans-serif;padding:24px;max-width:1000px;margin:0 auto">
-        <div style="text-align:center;border-bottom:3px solid #5B4FD4;padding-bottom:14px;margin-bottom:20px">
-          <h1 style="color:#5B4FD4;font-size:20px;margin:0 0 4px">Estadística Mensual de Asistencia</h1>
-          <p style="margin:0;color:#444;font-size:13px">Líder: ${lt?.nombre} | ${mesNombre(anio, mesNum)}</p>
+      <div style="font-family:Arial,sans-serif;padding:20px">
+        <div style="text-align:center;border-bottom:3px solid #5B4FD4;padding-bottom:12px;margin-bottom:16px">
+          <h1 style="color:#5B4FD4;font-size:18px;margin:0 0 4px">Estadística Mensual de Asistencia</h1>
+          <p style="margin:0;color:#444;font-size:12px">Líder: ${lt?.nombre} | ${mesNombre(anio, mesNum)}</p>
         </div>
-        <div style="overflow-x:auto">
-          <table style="border-collapse:collapse;width:100%">
-            <thead>
-              <tr style="background:#f5f4f0">
-                <th style="padding:8px;border:1px solid #ddd;text-align:left;font-size:11px;font-weight:600">Nombre</th>
-                ${headers}
-                <th style="padding:5px 6px;border:1px solid #ddd;font-size:10px;font-weight:600">Total</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </div>
+        <table style="border-collapse:collapse;width:100%">
+          <thead>
+            <tr style="background:#f5f4f0">
+              <th style="padding:6px 8px;border:1px solid #ddd;text-align:left;font-size:11px;font-weight:600">Nombre</th>
+              ${headers}
+              <th style="padding:5px 6px;border:1px solid #ddd;font-size:10px;font-weight:600">Total</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
         ${obsHtml}
       </div>`;
 
     report.style.display = 'block';
     html2pdf().set({
-      margin: 8, filename: `mensual_${lt?.nombre}_${anio}-${mesNum}.pdf`,
+      margin: 8,
+      filename: `mensual_${lt?.nombre}_${anio}-${mesNum}.pdf`,
       image: { type: 'png', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' }
+      html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+      jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' },
+      pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', 'div'] }
     }).from(report).save().then(() => {
       report.style.display = 'none';
       report.innerHTML = '';
