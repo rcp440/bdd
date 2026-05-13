@@ -4,9 +4,31 @@
 # ============================================================
 
 $logFile   = "$env:TEMP\cloudflared_tunnel.log"
-$repoDir   = $PSScriptRoot
 $archivos  = @("index.html", "app.html", "admin.html", "stats.html")
 $timeoutSeg = 40
+
+# ---- Directorio del repo (donde están los HTML y se hace git push) ----
+# Dejar vacío para detección automática, o poner la ruta completa:
+# Ej: $repoDirManual = "C:\bdd"
+$repoDirManual = ""
+
+# Detección automática: PSScriptRoot → C:\bdd → carpetas comunes
+$repoDir = $null
+$candidatos = @(
+    $PSScriptRoot,
+    "C:\bdd",
+    "$env:USERPROFILE\bdd",
+    "C:\Datos\VSCode\Asistencia\Sql Server"
+)
+if ($repoDirManual -ne "") { $candidatos = @($repoDirManual) + $candidatos }
+foreach ($c in $candidatos) {
+    if ($c -and (Test-Path (Join-Path $c "index.html"))) { $repoDir = $c; break }
+}
+if (-not $repoDir) {
+    Write-Host "[ERROR] No se encontro el directorio del repo con los archivos HTML." -ForegroundColor Red
+    Write-Host "        Edita tunnel.ps1 y pon la ruta en la variable `$repoDirManual" -ForegroundColor Yellow
+    exit 1
+}
 
 Write-Host ""
 Write-Host "=== TUNNEL CLOUDFLARE ===" -ForegroundColor Cyan
@@ -42,6 +64,7 @@ if (-not $cloudflaredExe) {
     exit 1
 }
 
+Write-Host "Repo:   $repoDir" -ForegroundColor DarkGray
 Write-Host "Usando: $cloudflaredExe" -ForegroundColor DarkGray
 Write-Host "Iniciando cloudflared..." -ForegroundColor Yellow
 
