@@ -627,17 +627,20 @@
         </div>
         ${tarjetas}
       </div>`;
+    // Mover al inicio del body para que html2canvas no incluya espacio en blanco arriba
+    document.body.prepend(report);
     report.style.display = 'block';
     html2pdf().set({
       margin: 10,
       filename: `entrevistas_${desdeE}_${hastaE}.pdf`,
       image: { type: 'png', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
+      html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
       jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
       pagebreak: { mode: ['css', 'legacy'] }
     }).from(report).save().then(() => {
       report.style.display = 'none';
       report.innerHTML = '';
+      document.body.append(report); // restaurar al final
     });
   }
 
