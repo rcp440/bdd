@@ -604,43 +604,43 @@
     if (!lastEntrevistasData) return;
     const { data, desdeE, hastaE } = lastEntrevistasData;
     const rows = data.entrevistas || [];
-    const filas = rows.map(e => {
+    const tarjetas = rows.map(e => {
       const meta = [e.horario, e.lugar].filter(Boolean).join(' · ');
-      return `<tr>
-        <td style="padding:7px 8px;border-bottom:1px solid #eee;font-weight:500">${e.discipulo}</td>
-        <td style="padding:7px 8px;border-bottom:1px solid #eee;font-size:11px;color:#555">${e.lider}${e.gc ? '<br><span style="color:#888">' + e.gc + '</span>' : ''}</td>
-        <td style="padding:7px 8px;border-bottom:1px solid #eee;font-size:11px;color:#5B4FD4">${fmtShort(e.fecha)}${meta ? '<br><span style="color:#888">' + meta + '</span>' : ''}</td>
-        <td style="padding:7px 8px;border-bottom:1px solid #eee;font-size:12px;line-height:1.5;white-space:pre-wrap">${e.temas ? e.temas.replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''}</td>
-      </tr>`;
+      const temas = e.temas ? e.temas.replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
+      return `
+        <div style="border:1px solid #ddd;border-radius:6px;padding:10px 12px;margin-bottom:8px;page-break-inside:avoid">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:${temas ? '8px' : '0'}">
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;color:#1a1a1a">${e.discipulo}</div>
+              <div style="font-size:11px;color:#666;margin-top:2px">${e.lider}${e.gc ? ' · ' + e.gc : ''}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:11px;font-weight:600;color:#5B4FD4;text-transform:uppercase">${fmtShort(e.fecha)}</div>
+              ${meta ? `<div style="font-size:10px;color:#888;margin-top:2px">${meta}</div>` : ''}
+            </div>
+          </div>
+          ${temas ? `<div style="font-size:12px;color:#333;line-height:1.6;border-left:3px solid #5B4FD4;padding-left:10px;white-space:pre-wrap">${temas}</div>` : ''}
+        </div>`;
     }).join('');
     const report = document.getElementById('printReport');
     report.innerHTML = `
-      <div style="font-family:Arial,sans-serif;padding:20px">
+      <div style="font-family:Arial,sans-serif;padding:20px;width:900px">
         <div style="text-align:center;border-bottom:3px solid #5B4FD4;padding-bottom:12px;margin-bottom:16px">
           <h1 style="color:#5B4FD4;font-size:18px;margin:0 0 4px">Informe de Entrevistas</h1>
           <p style="margin:0;color:#444;font-size:12px">Período: ${fmtShort(desdeE)} al ${fmtShort(hastaE)} · ${rows.length} entrevista${rows.length !== 1 ? 's' : ''}</p>
         </div>
-        <table style="border-collapse:collapse;width:100%">
-          <thead>
-            <tr style="background:#f5f4f0">
-              <th style="padding:7px 8px;border:1px solid #ddd;text-align:left;font-size:11px">Discípulo</th>
-              <th style="padding:7px 8px;border:1px solid #ddd;text-align:left;font-size:11px">Líder / GC</th>
-              <th style="padding:7px 8px;border:1px solid #ddd;text-align:left;font-size:11px">Fecha</th>
-              <th style="padding:7px 8px;border:1px solid #ddd;text-align:left;font-size:11px">Temas</th>
-            </tr>
-          </thead>
-          <tbody>${filas}</tbody>
-        </table>
+        ${tarjetas}
       </div>`;
-    report.style.display = 'block';
+    report.style.cssText = 'display:block;position:fixed;left:-9999px;top:0;background:#fff';
     html2pdf().set({
-      margin: 8,
+      margin: 10,
       filename: `entrevistas_${desdeE}_${hastaE}.pdf`,
       image: { type: 'png', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' }
+      html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0, windowWidth: 960 },
+      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
+      pagebreak: { mode: ['css', 'legacy'] }
     }).from(report).save().then(() => {
-      report.style.display = 'none';
+      report.style.cssText = 'display:none';
       report.innerHTML = '';
     });
   }
