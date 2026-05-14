@@ -73,13 +73,15 @@
     <div class="tabs">
       <button class="tab-btn active" id="tabBtnM" onclick="switchTab('mensual')">Mensual</button>
       <button class="tab-btn" id="tabBtnP" onclick="switchTab('persona')">Por persona</button>
+      <button class="tab-btn" id="tabBtnE" onclick="switchTab('entrevistas')">Entrevistas</button>
     </div>
   </div>
 
   <!-- Tab Mensual -->
   <div id="tabMensual">
     <div class="filters">
-      <select id="selectLiderM"><option value="">-- Seleccionar líder --</option></select>
+      <select id="selectLiderM" onchange="loadGruposM()"><option value="">-- Seleccionar líder --</option></select>
+      <select id="selectGrupoM"><option value="">-- Seleccionar GC --</option></select>
       <input type="month" id="selectMes">
       <button class="gen-btn" id="btnGenM" onclick="generarMensual()">Generar estadística</button>
     </div>
@@ -107,6 +109,26 @@
     <div id="resultPersona"></div>
     <button id="btnPdfP" class="pdf-btn" style="display:none" onclick="pdfPersona()">Descargar PDF persona</button>
   </div>
+
+  <!-- Tab Entrevistas -->
+  <div id="tabEntrevistas" style="display:none">
+    <div class="filters">
+      <select id="selectLiderE"><option value="">Todos los líderes</option></select>
+      <div class="date-row">
+        <div>
+          <label>Desde</label>
+          <input type="date" id="desdeE">
+        </div>
+        <div>
+          <label>Hasta</label>
+          <input type="date" id="hastaE">
+        </div>
+      </div>
+      <button class="gen-btn" id="btnGenE" onclick="generarEntrevistas()">Generar informe</button>
+    </div>
+    <div id="resultEntrevistas"></div>
+    <button id="btnPdfE" class="pdf-btn" style="display:none" onclick="pdfEntrevistas()">Descargar PDF entrevistas</button>
+  </div>
 </div>
 
 <div id="printReport"></div>
@@ -115,13 +137,21 @@
   const API_URL = 'https://resist-turn-condition-patterns.trycloudflare.com/api';
   const lider = JSON.parse(sessionStorage.getItem('lider'));
 
-  if (!lider || lider.rol !== 'admin') {
+  if (!lider || (lider.rol !== 'admin' && lider.rol !== 'pastoral')) {
     window.location.href = 'index.html';
     throw new Error('Sin permisos');
   }
 
+  // Ocultar tabs que no aplican a pastoral
+  if (lider.rol === 'pastoral') {
+    document.getElementById('tabBtnM').style.display = 'none';
+    document.getElementById('tabBtnP').style.display = 'none';
+    switchTab('entrevistas');
+  }
+
   let lastMensualData = null;
   let lastPersonaData = null;
+  let lastEntrevistasData = null;
 
   const today = new Date();
   const yyyy = today.getFullYear();
@@ -130,12 +160,14 @@
   document.getElementById('selectMes').value = `${yyyy}-${mm}`;
   document.getElementById('desde').value = `${yyyy}-${mm}-01`;
   document.getElementById('hasta').value = `${yyyy}-${mm}-${dd}`;
+  document.getElementById('desdeE').value = `${yyyy}-${mm}-01`;
+  document.getElementById('hastaE').value = `${yyyy}-${mm}-${dd}`;
 
   function switchTab(tab) {
-    document.getElementById('tabMensual').style.display = tab === 'mensual' ? 'block' : 'none';
-    document.getElementById('tabPersona').style.display = tab === 'persona' ? 'block' : 'none';
-    document.getElementById('tabBtnM').classList.toggle('active', tab === 'mensual');
-    document.getElementById('tabBtnP').classList.toggle('active', tab === 'persona');
+    ['mensual','persona','entrevistas'].forEach(t => {
+      document.getElementById(`tab${t.charAt(0).toUpperCase()+t.slice(1)}`).style.display = t === tab ? 'block' : 'none';
+      document.getElementById(`tabBtn${t === 'mensual' ? 'M' : t === 'persona' ? 'P' : 'E'}`).classList.toggle('active', t === tab);
+    });
   }
 
   async function loadLideres() {
@@ -147,6 +179,21 @@
       ['selectLiderM', 'selectLiderP'].forEach(id => {
         document.getElementById(id).innerHTML = '<option value="">-- Seleccionar líder --</option>' + opts;
       });
+      document.getElementById('selectLiderE').innerHTML =
+        '<option value="">Todos los líderes</option>' + opts;
+    } catch (err) {}
+  }
+
+  async function loadGruposM() {
+    const liderId = document.getElementById('selectLiderM').value;
+    const sel = document.getElementById('selectGrupoM');
+    sel.innerHTML = '<option value="">-- Seleccionar GC --</option>';
+    if (!liderId) return;
+    try {
+      const res = await fetch(`${API_URL}/grupos/${liderId}`);
+      const data = await res.json();
+      sel.innerHTML = '<option value="">-- Seleccionar GC --</option>' +
+        (data.grupos || []).map(g => `<option value="${g.id}">${g.nombre}</option>`).join('');
     } catch (err) {}
   }
 
@@ -199,13 +246,13 @@
   }
 
   async function generarMensual() {
-    const liderId = document.getElementById('selectLiderM').value;
+    const grupoId = document.getElementById('selectGrupoM').value;
     const mes = document.getElementById('selectMes').value;
     const btn = document.getElementById('btnGenM');
     const result = document.getElementById('resultMensual');
 
-    if (!liderId || !mes) {
-      result.innerHTML = '<div class="empty">Selecciona un líder y mes</div>';
+    if (!grupoId || !mes) {
+      result.innerHTML = '<div class="empty">Seleccioná un GC y mes</div>';
       return;
     }
 
@@ -216,7 +263,7 @@
     document.getElementById('btnPdfM').style.display = 'none';
 
     try {
-      const res = await fetch(`${API_URL}/stats/mensual/${liderId}/${anio}/${mesNum}?by=${lider.id}`);
+      const res = await fetch(`${API_URL}/stats/mensual/grupo/${grupoId}/${anio}/${mesNum}?by=${lider.id}`);
       const data = await res.json();
       if (!res.ok) {
         result.innerHTML = `<div class="empty">${data.error || 'Error al cargar'}</div>`;
@@ -235,7 +282,7 @@
 
   function renderMensual(data, anio, mesNum) {
     const result = document.getElementById('resultMensual');
-    const { asistencia, reuniones, lider: lt } = data;
+    const { asistencia, reuniones, grupo: gt } = data;
     const { fechas, disciples } = buildMatrix(asistencia);
 
     if (!disciples.length) {
@@ -268,7 +315,7 @@
       </div>` : '';
 
     result.innerHTML = `
-      <div class="section-label">${lt?.nombre} — ${mesNombre(anio, mesNum)}</div>
+      <div class="section-label">${gt?.lider_nombre} · ${gt?.grupo_nombre} — ${mesNombre(anio, mesNum)}</div>
       <div class="table-wrap">
         <table>
           <thead><tr><th class="th-name">Nombre</th>${headers}<th>Total</th></tr></thead>
@@ -348,7 +395,8 @@
   function pdfMensual() {
     if (!lastMensualData) return;
     const { data, anio, mesNum } = lastMensualData;
-    const { asistencia, reuniones, lider: lt } = data;
+    const { asistencia, reuniones, grupo: gt } = data;
+    const lt = gt ? { nombre: `${gt.lider_nombre} · ${gt.grupo_nombre}` } : { nombre: '' };
     const { fechas, disciples } = buildMatrix(asistencia);
 
     const reunionesConObs = (reuniones || []).filter(r => r.observacion && r.observacion.trim());
@@ -479,6 +527,118 @@
       image: { type: 'png', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+    }).from(report).save().then(() => {
+      report.style.display = 'none';
+      report.innerHTML = '';
+    });
+  }
+
+  // ==================== ENTREVISTAS ====================
+
+  async function generarEntrevistas() {
+    const desdeE  = document.getElementById('desdeE').value;
+    const hastaE  = document.getElementById('hastaE').value;
+    const liderE  = document.getElementById('selectLiderE').value;
+    const btn     = document.getElementById('btnGenE');
+    const result  = document.getElementById('resultEntrevistas');
+
+    if (!desdeE || !hastaE) {
+      result.innerHTML = '<div class="empty">Completá las fechas</div>';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Cargando...';
+    result.innerHTML = '<div class="empty">Cargando...</div>';
+    document.getElementById('btnPdfE').style.display = 'none';
+
+    try {
+      const params = new URLSearchParams({ desde: desdeE, hasta: hastaE, by: lider.id });
+      if (liderE) params.append('filtro_lider_id', liderE);
+      const res = await fetch(`${API_URL}/stats/entrevistas?${params}`);
+      const data = await res.json();
+      if (!res.ok) { result.innerHTML = `<div class="empty">${data.error || 'Error'}</div>`; return; }
+      lastEntrevistasData = { data, desdeE, hastaE };
+      renderEntrevistas(data.entrevistas || [], desdeE, hastaE);
+      document.getElementById('btnPdfE').style.display = 'block';
+    } catch (err) {
+      result.innerHTML = '<div class="empty">Error de conexión</div>';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Generar informe';
+    }
+  }
+
+  function renderEntrevistas(rows, desdeE, hastaE) {
+    const result = document.getElementById('resultEntrevistas');
+    if (!rows.length) {
+      result.innerHTML = '<div class="empty">Sin entrevistas en ese período</div>';
+      return;
+    }
+    const filas = rows.map(e => {
+      const meta = [e.horario, e.lugar].filter(Boolean).join(' · ');
+      return `
+        <div class="obs-card" style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:4px">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text)">${e.discipulo}</div>
+              <div style="font-size:11px;color:var(--muted)">${e.lider}${e.gc ? ' · ' + e.gc : ''}</div>
+            </div>
+            <div style="text-align:right">
+              <div class="obs-date">${fmtShort(e.fecha)}</div>
+              ${meta ? `<div style="font-size:11px;color:var(--muted)">${meta}</div>` : ''}
+              ${e.entrevistador !== e.lider ? `<div style="font-size:10px;color:var(--purple)">por ${e.entrevistador}</div>` : ''}
+            </div>
+          </div>
+          ${e.temas ? `<div class="obs-text" style="margin-top:8px;border-left:3px solid var(--purple);padding-left:10px;white-space:pre-wrap">${e.temas.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>` : ''}
+        </div>`;
+    }).join('');
+    result.innerHTML = `
+      <div class="section-label" style="padding-left:0;margin:0 20px 8px">
+        ${rows.length} entrevista${rows.length !== 1 ? 's' : ''} — ${fmtShort(desdeE)} al ${fmtShort(hastaE)}
+      </div>
+      <div class="obs-list">${filas}</div>`;
+  }
+
+  function pdfEntrevistas() {
+    if (!lastEntrevistasData) return;
+    const { data, desdeE, hastaE } = lastEntrevistasData;
+    const rows = data.entrevistas || [];
+    const filas = rows.map(e => {
+      const meta = [e.horario, e.lugar].filter(Boolean).join(' · ');
+      return `<tr>
+        <td style="padding:7px 8px;border-bottom:1px solid #eee;font-weight:500">${e.discipulo}</td>
+        <td style="padding:7px 8px;border-bottom:1px solid #eee;font-size:11px;color:#555">${e.lider}${e.gc ? '<br><span style="color:#888">' + e.gc + '</span>' : ''}</td>
+        <td style="padding:7px 8px;border-bottom:1px solid #eee;font-size:11px;color:#5B4FD4">${fmtShort(e.fecha)}${meta ? '<br><span style="color:#888">' + meta + '</span>' : ''}</td>
+        <td style="padding:7px 8px;border-bottom:1px solid #eee;font-size:12px;line-height:1.5;white-space:pre-wrap">${e.temas ? e.temas.replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''}</td>
+      </tr>`;
+    }).join('');
+    const report = document.getElementById('printReport');
+    report.innerHTML = `
+      <div style="font-family:Arial,sans-serif;padding:20px">
+        <div style="text-align:center;border-bottom:3px solid #5B4FD4;padding-bottom:12px;margin-bottom:16px">
+          <h1 style="color:#5B4FD4;font-size:18px;margin:0 0 4px">Informe de Entrevistas</h1>
+          <p style="margin:0;color:#444;font-size:12px">Período: ${fmtShort(desdeE)} al ${fmtShort(hastaE)} · ${rows.length} entrevista${rows.length !== 1 ? 's' : ''}</p>
+        </div>
+        <table style="border-collapse:collapse;width:100%">
+          <thead>
+            <tr style="background:#f5f4f0">
+              <th style="padding:7px 8px;border:1px solid #ddd;text-align:left;font-size:11px">Discípulo</th>
+              <th style="padding:7px 8px;border:1px solid #ddd;text-align:left;font-size:11px">Líder / GC</th>
+              <th style="padding:7px 8px;border:1px solid #ddd;text-align:left;font-size:11px">Fecha</th>
+              <th style="padding:7px 8px;border:1px solid #ddd;text-align:left;font-size:11px">Temas</th>
+            </tr>
+          </thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </div>`;
+    report.style.display = 'block';
+    html2pdf().set({
+      margin: 8,
+      filename: `entrevistas_${desdeE}_${hastaE}.pdf`,
+      image: { type: 'png', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' }
     }).from(report).save().then(() => {
       report.style.display = 'none';
       report.innerHTML = '';

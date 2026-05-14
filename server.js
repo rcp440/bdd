@@ -738,6 +738,42 @@ app.get('/api/stats/mensual/grupo/:grupo_id/:anio/:mes', async (req, res) => {
   }
 });
 
+// Informe de entrevistas entre fechas (admin/pastoral)
+app.get('/api/stats/entrevistas', async (req, res) => {
+  try {
+    const { desde, hasta, by, filtro_lider_id } = req.query;
+    const rol = await getRolLider(by);
+    if (!esPastoral(rol)) return res.status(403).json({ error: 'Sin permisos' });
+    if (!desde || !hasta) return res.status(400).json({ error: 'Fechas requeridas' });
+
+    const req2 = pool.request()
+      .input('desde', sql.Date, desde)
+      .input('hasta', sql.Date, hasta)
+      .input('filtro_lider_id', sql.Int, filtro_lider_id ? parseInt(filtro_lider_id) : null);
+
+    const result = await req2.query(`
+      SELECT d.nombre AS discipulo,
+             l.nombre AS lider,
+             g.nombre AS gc,
+             CONVERT(VARCHAR(10), e.fecha, 23) AS fecha,
+             e.horario, e.lugar, e.temas,
+             le.nombre AS entrevistador
+      FROM Entrevistas e
+      JOIN Discipulos d ON e.discipulo_id = d.id
+      JOIN Lideres l ON d.lider_id = l.id
+      LEFT JOIN Grupos g ON d.grupo_id = g.id
+      JOIN Lideres le ON e.lider_id = le.id
+      WHERE CAST(e.fecha AS DATE) BETWEEN @desde AND @hasta
+        AND (@filtro_lider_id IS NULL OR d.lider_id = @filtro_lider_id)
+      ORDER BY e.fecha DESC, d.nombre
+    `);
+    res.json({ entrevistas: result.recordset });
+  } catch (err) {
+    console.error('Error stats entrevistas:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
 // Ruta legacy por lider_id
 app.get('/api/stats/mensual/:lider_id/:anio/:mes', async (req, res) => {
   try {
