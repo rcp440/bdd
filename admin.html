@@ -53,6 +53,19 @@
     .msg.err { display: block; background: var(--red-bg); color: var(--red); border: 1px solid #E8C8C4; }
     .empty { text-align: center; padding: 24px; color: var(--muted); font-size: 13px; }
 
+    /* Grupos */
+    .grupo-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 8px; }
+    .grupo-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .grupo-nombre { font-size: 13px; font-weight: 600; color: var(--purple); }
+    .disc-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+    .disc-row:last-child { border-bottom: none; }
+    .disc-name { font-size: 12px; flex: 1; }
+    .mover-select { font-size: 11px; padding: 3px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--card); color: var(--muted); cursor: pointer; font-family: 'DM Sans', sans-serif; max-width: 110px; }
+    .mini-input { padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; background: var(--bg); outline: none; font-family: 'DM Sans', sans-serif; width: 100%; }
+    .mini-input:focus { border-color: var(--purple); }
+    .mini-btn { background: var(--purple); color: #fff; border: none; border-radius: var(--radius-sm); padding: 7px 12px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
+    .mini-btn-ghost { background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 10px; font-size: 12px; cursor: pointer; }
+
     /* Modal */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
     .modal-overlay.open { display: flex; }
@@ -110,6 +123,29 @@
       <button class="submit-btn" id="btnCrear" onclick="crearLider()">Crear líder</button>
       <div id="formMsg" class="msg"></div>
     </div>
+  </div>
+</div>
+
+<!-- Modal de grupos -->
+<div class="modal-overlay" id="modalGrupos" onclick="if(event.target===this)document.getElementById('modalGrupos').classList.remove('open')">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <span class="modal-title" id="gruposTitle">Grupos</span>
+      <button class="modal-close" onclick="document.getElementById('modalGrupos').classList.remove('open')">×</button>
+    </div>
+    <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+      <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Células</span>
+      <button class="mini-btn" onclick="toggleNuevoGrupoForm()">+ Nueva célula</button>
+    </div>
+    <div id="nuevoGrupoForm" style="display:none;margin-bottom:12px">
+      <div style="display:flex;gap:6px">
+        <input type="text" id="ngNombre" class="mini-input" placeholder="Nombre de la célula" onkeydown="if(event.key==='Enter')crearGrupo()">
+        <button class="mini-btn" onclick="crearGrupo()">Crear</button>
+        <button class="mini-btn-ghost" onclick="toggleNuevoGrupoForm()">✕</button>
+      </div>
+      <div id="ngMsg" class="msg" style="margin-top:6px"></div>
+    </div>
+    <div id="gruposContainer"><div class="empty">Cargando...</div></div>
   </div>
 </div>
 
@@ -200,6 +236,7 @@
           </div>
           <div class="card-actions">
             <button class="action-btn edit" data-idx="${i}">Editar</button>
+            <button class="action-btn edit" onclick="openGruposModal(${l.id}, \`${l.nombre.replace(/`/g,'\\`')}\`)">Grupos</button>
             ${l.id !== lider.id ? `<button class="action-btn ${l.activo ? '' : 'activate'}" data-id="${l.id}" data-activo="${l.activo}">${l.activo ? 'Desactivar' : 'Activar'}</button>` : ''}
           </div>
         </div>
@@ -363,6 +400,208 @@
   }
 
   loadLideres();
+
+  // ==================== GRUPOS ====================
+
+  let gruposLiderId = null;
+  let gruposData = [];
+
+  function openGruposModal(liderId, liderNombre) {
+    gruposLiderId = liderId;
+    document.getElementById('gruposTitle').textContent = `Grupos de ${liderNombre}`;
+    document.getElementById('nuevoGrupoForm').style.display = 'none';
+    document.getElementById('ngNombre').value = '';
+    document.getElementById('ngMsg').className = 'msg';
+    document.getElementById('modalGrupos').classList.add('open');
+    loadGrupos();
+  }
+
+  function toggleNuevoGrupoForm() {
+    const f = document.getElementById('nuevoGrupoForm');
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    if (f.style.display === 'block') setTimeout(() => document.getElementById('ngNombre').focus(), 50);
+  }
+
+  async function loadGrupos() {
+    const container = document.getElementById('gruposContainer');
+    container.innerHTML = '<div class="empty">Cargando...</div>';
+    try {
+      const res = await fetch(`${API_URL}/grupos/${gruposLiderId}`);
+      const data = await res.json();
+      gruposData = data.grupos || [];
+
+      if (!gruposData.length) {
+        container.innerHTML = '<div class="empty">Sin grupos. Creá la primera célula.</div>';
+        return;
+      }
+
+      for (const g of gruposData) {
+        const r = await fetch(`${API_URL}/discipulos/grupo/${g.id}`);
+        const d = await r.json();
+        g.discipulos = d.discipulos || [];
+      }
+
+      renderGrupos();
+    } catch (err) {
+      container.innerHTML = '<div class="empty">Error al cargar</div>';
+    }
+  }
+
+  function renderGrupos() {
+    const container = document.getElementById('gruposContainer');
+    container.innerHTML = gruposData.map(g => {
+      const otrosGrupos = gruposData.filter(og => og.id !== g.id);
+      const discsHtml = g.discipulos.length
+        ? g.discipulos.map(d => `
+            <div class="disc-row">
+              <span class="disc-name">${d.nombre}</span>
+              ${otrosGrupos.length ? `
+                <select class="mover-select" onchange="moverDiscipulo(${d.id},this.value,${g.id},this)">
+                  <option value="">Mover a...</option>
+                  ${otrosGrupos.map(og => `<option value="${og.id}">${og.nombre}</option>`).join('')}
+                </select>` : ''}
+            </div>`).join('')
+        : '<div style="color:var(--muted);font-size:12px;padding:4px 0">Sin discípulos</div>';
+
+      return `
+        <div class="grupo-card">
+          <div class="grupo-header">
+            <span class="grupo-nombre" id="gname-${g.id}">${g.nombre}</span>
+            <div style="display:flex;gap:4px">
+              <button class="action-btn edit" style="font-size:12px" onclick="iniciarRenombrar(${g.id})">✏ Renombrar</button>
+              <button class="action-btn" style="font-size:12px" onclick="confirmarDesactivarGrupo(${g.id})">✗</button>
+            </div>
+          </div>
+          <div id="grename-${g.id}" style="display:none;margin-bottom:8px">
+            <div style="display:flex;gap:6px">
+              <input type="text" id="ri-${g.id}" class="mini-input" value="${g.nombre}" onkeydown="if(event.key==='Enter')guardarRenombrar(${g.id})">
+              <button class="mini-btn" onclick="guardarRenombrar(${g.id})">OK</button>
+              <button class="mini-btn-ghost" onclick="cancelarRenombrar(${g.id})">✕</button>
+            </div>
+          </div>
+          <div style="margin-bottom:8px">${discsHtml}</div>
+          <div id="addform-${g.id}" style="display:none;margin-bottom:6px">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <input type="text" id="adname-${g.id}" class="mini-input" placeholder="Nombre y apellido" onkeydown="if(event.key==='Enter')document.getElementById('adcel-${g.id}').focus()">
+              <input type="tel" id="adcel-${g.id}" class="mini-input" placeholder="Celular (opcional)" onkeydown="if(event.key==='Enter')agregarDiscipuloGrupo(${g.id})">
+              <div style="display:flex;gap:6px">
+                <button class="mini-btn" style="flex:1" onclick="agregarDiscipuloGrupo(${g.id})">+ Agregar</button>
+                <button class="mini-btn-ghost" onclick="document.getElementById('addform-${g.id}').style.display='none'">Cancelar</button>
+              </div>
+              <div id="addmsg-${g.id}" class="msg" style="margin-top:0"></div>
+            </div>
+          </div>
+          <button class="action-btn edit" style="width:100%;text-align:center;font-size:12px" onclick="toggleAddDiscForm(${g.id})">+ Agregar discípulo</button>
+        </div>`;
+    }).join('');
+  }
+
+  function iniciarRenombrar(grupoId) {
+    document.getElementById(`gname-${grupoId}`).style.display = 'none';
+    document.getElementById(`grename-${grupoId}`).style.display = 'block';
+    document.getElementById(`ri-${grupoId}`).focus();
+  }
+
+  function cancelarRenombrar(grupoId) {
+    document.getElementById(`gname-${grupoId}`).style.display = '';
+    document.getElementById(`grename-${grupoId}`).style.display = 'none';
+  }
+
+  async function guardarRenombrar(grupoId) {
+    const nombre = document.getElementById(`ri-${grupoId}`).value.trim();
+    if (!nombre) return;
+    try {
+      const res = await fetch(`${API_URL}/grupos/${grupoId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lider_id: gruposLiderId, nombre })
+      });
+      if (res.ok) {
+        const g = gruposData.find(g => g.id === grupoId);
+        if (g) g.nombre = nombre;
+        document.getElementById(`gname-${grupoId}`).textContent = nombre;
+        cancelarRenombrar(grupoId);
+      }
+    } catch (err) { alert('Error al renombrar'); }
+  }
+
+  async function confirmarDesactivarGrupo(grupoId) {
+    const g = gruposData.find(g => g.id === grupoId);
+    if (!confirm(`¿Desactivar "${g?.nombre}"?`)) return;
+    try {
+      await fetch(`${API_URL}/grupos/${grupoId}/activo`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lider_id: gruposLiderId, activo: false })
+      });
+      loadGrupos();
+    } catch (err) { alert('Error al desactivar'); }
+  }
+
+  async function crearGrupo() {
+    const nombre = document.getElementById('ngNombre').value.trim();
+    const msg = document.getElementById('ngMsg');
+    if (!nombre) { msg.textContent = 'Ingresá un nombre'; msg.className = 'msg err'; return; }
+    try {
+      const res = await fetch(`${API_URL}/grupos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lider_id: gruposLiderId, nombre })
+      });
+      if (res.ok) {
+        document.getElementById('ngNombre').value = '';
+        document.getElementById('nuevoGrupoForm').style.display = 'none';
+        loadGrupos();
+      } else {
+        const d = await res.json();
+        msg.textContent = d.error || 'Error'; msg.className = 'msg err';
+      }
+    } catch (err) { msg.textContent = 'Error de conexión'; msg.className = 'msg err'; }
+  }
+
+  function toggleAddDiscForm(grupoId) {
+    const f = document.getElementById(`addform-${grupoId}`);
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    if (f.style.display === 'block') setTimeout(() => document.getElementById(`adname-${grupoId}`).focus(), 50);
+  }
+
+  async function agregarDiscipuloGrupo(grupoId) {
+    const nombre = document.getElementById(`adname-${grupoId}`).value.trim();
+    const celular = document.getElementById(`adcel-${grupoId}`).value.trim();
+    const msg = document.getElementById(`addmsg-${grupoId}`);
+    if (!nombre) { msg.textContent = 'El nombre es requerido'; msg.className = 'msg err'; return; }
+    try {
+      const res = await fetch(`${API_URL}/discipulos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ grupo_id: grupoId, nombre, celular })
+      });
+      const data = await res.json();
+      if (!res.ok) { msg.textContent = data.error || 'Error'; msg.className = 'msg err'; }
+      else {
+        msg.textContent = '✓ Discípulo agregado'; msg.className = 'msg ok';
+        document.getElementById(`adname-${grupoId}`).value = '';
+        document.getElementById(`adcel-${grupoId}`).value = '';
+        loadGrupos();
+      }
+    } catch (err) { msg.textContent = 'Error de conexión'; msg.className = 'msg err'; }
+  }
+
+  async function moverDiscipulo(discId, nuevoGrupoId, grupoActualId, selectEl) {
+    if (!nuevoGrupoId) return;
+    const grupo = gruposData.find(g => g.id === grupoActualId);
+    const disc = grupo?.discipulos.find(d => d.id === discId);
+    if (!disc) return;
+    try {
+      const res = await fetch(`${API_URL}/discipulos/${discId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lider_id: gruposLiderId, nombre: disc.nombre, celular: disc.celular || '', grupo_id: parseInt(nuevoGrupoId) })
+      });
+      if (res.ok) loadGrupos();
+      else { selectEl.value = ''; alert('Error al mover discípulo'); }
+    } catch (err) { selectEl.value = ''; alert('Error de conexión'); }
+  }
 </script>
 </body>
 </html>

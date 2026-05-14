@@ -563,8 +563,8 @@ app.get('/api/admin/discipulos', async (req, res) => {
 
 app.put('/api/discipulos/:id', async (req, res) => {
   try {
-    const { lider_id, nombre, celular, fecha_nacimiento } = req.body;
-    if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
+    const { lider_id, nombre, celular, fecha_nacimiento, grupo_id } = req.body;
+    if (!nombre && !grupo_id) return res.status(400).json({ error: 'Nombre o grupo_id requerido' });
     const chk = await pool.request()
       .input('id', sql.Int, parseInt(lider_id))
       .query('SELECT rol FROM Lideres WHERE id = @id AND activo = 1');
@@ -576,14 +576,21 @@ app.put('/api/discipulos/:id', async (req, res) => {
         .query('SELECT id FROM Discipulos WHERE id = @disc_id AND lider_id = @lider_id');
       if (!own.recordset.length) return res.status(403).json({ error: 'Sin permisos' });
     }
-    await pool.request()
-      .input('id', sql.Int, parseInt(req.params.id))
-      .input('nombre', sql.VarChar, nombre)
-      .input('celular', sql.VarChar, celular || '')
-      .input('fecha_nacimiento', sql.Date, fecha_nacimiento || null)
-      .query(
+    const req2 = pool.request();
+    req2.input('id', sql.Int, parseInt(req.params.id));
+    req2.input('nombre', sql.VarChar, nombre || '');
+    req2.input('celular', sql.VarChar, celular || '');
+    req2.input('fecha_nacimiento', sql.Date, fecha_nacimiento || null);
+    if (grupo_id) {
+      req2.input('grupo_id', sql.Int, parseInt(grupo_id));
+      await req2.query(
+        `UPDATE Discipulos SET nombre=CASE WHEN @nombre='' THEN nombre ELSE @nombre END, celular=@celular, fecha_nacimiento=@fecha_nacimiento, grupo_id=@grupo_id WHERE id=@id`
+      );
+    } else {
+      await req2.query(
         `UPDATE Discipulos SET nombre=@nombre, celular=@celular, fecha_nacimiento=@fecha_nacimiento WHERE id=@id`
       );
+    }
     res.json({ ok: true });
   } catch (err) {
     console.error('Error editando discípulo:', err);
