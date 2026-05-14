@@ -627,16 +627,16 @@
         </div>
         ${tarjetas}
       </div>`;
-    report.style.cssText = 'display:block;position:fixed;left:-9999px;top:0;background:#fff';
+    report.style.display = 'block';
     html2pdf().set({
       margin: 10,
       filename: `entrevistas_${desdeE}_${hastaE}.pdf`,
       image: { type: 'png', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0, windowWidth: 960 },
+      html2canvas: { scale: 2, useCORS: true },
       jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' },
       pagebreak: { mode: ['css', 'legacy'] }
     }).from(report).save().then(() => {
-      report.style.cssText = 'display:none';
+      report.style.display = 'none';
       report.innerHTML = '';
     });
   }
