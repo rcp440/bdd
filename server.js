@@ -198,7 +198,60 @@ app.patch('/api/grupos/:id/activo', async (req, res) => {
 
 // ==================== DISCÍPULOS ====================
 
-// IMPORTANTE: ruta específica antes que /:lider_id
+// IMPORTANTE: rutas específicas antes que /:lider_id
+
+// Búsqueda de discípulos (solo pastoral/admin)
+app.get('/api/discipulos/buscar', async (req, res) => {
+  try {
+    const { q, lider_id, filtro_lider_id } = req.query;
+    const rol = await getRolLider(lider_id);
+    if (!esPastoral(rol)) return res.status(403).json({ error: 'Sin permisos' });
+
+    const tieneNombre = q && q.trim().length >= 2;
+    const tieneLider  = filtro_lider_id && parseInt(filtro_lider_id);
+
+    // Sin ningún filtro: retornar vacío
+    if (!tieneNombre && !tieneLider) return res.json({ discipulos: [] });
+
+    const req2 = pool.request();
+    req2.input('filtro_lider_id', sql.Int, tieneLider ? parseInt(filtro_lider_id) : null);
+    req2.input('q', sql.NVarChar(100), tieneNombre ? `%${q.trim()}%` : null);
+
+    const result = await req2.query(`
+      SELECT d.id, d.nombre, d.celular,
+             l.nombre AS lider_nombre,
+             g.nombre AS grupo_nombre
+      FROM Discipulos d
+      JOIN Lideres l ON d.lider_id = l.id
+      LEFT JOIN Grupos g ON d.grupo_id = g.id
+      WHERE d.activo = 1
+        AND (@filtro_lider_id IS NULL OR d.lider_id = @filtro_lider_id)
+        AND (@q IS NULL OR d.nombre LIKE @q)
+      ORDER BY d.nombre
+    `);
+    res.json({ discipulos: result.recordset });
+  } catch (err) {
+    console.error('Error buscar discipulos:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
+// Lista de líderes activos (pastoral/admin)
+app.get('/api/lideres/activos', async (req, res) => {
+  try {
+    const { lider_id } = req.query;
+    const rol = await getRolLider(lider_id);
+    if (!esPastoral(rol)) return res.status(403).json({ error: 'Sin permisos' });
+    const result = await pool.request().query(
+      `SELECT id, nombre FROM Lideres WHERE activo = 1 ORDER BY nombre`
+    );
+    res.json({ lideres: result.recordset });
+  } catch (err) {
+    console.error('Error listando líderes activos:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
 app.get('/api/discipulos/grupo/:grupo_id', async (req, res) => {
   try {
     const r = await pool.request()
@@ -783,32 +836,6 @@ async function getRolLider(lider_id) {
 }
 
 function esPastoral(rol) { return rol === 'pastoral' || rol === 'admin'; }
-
-// Búsqueda de discípulos (solo pastoral/admin)
-app.get('/api/discipulos/buscar', async (req, res) => {
-  try {
-    const { q, lider_id } = req.query;
-    const rol = await getRolLider(lider_id);
-    if (!esPastoral(rol)) return res.status(403).json({ error: 'Sin permisos' });
-    if (!q || q.trim().length < 2) return res.json({ discipulos: [] });
-    const result = await pool.request()
-      .input('q', sql.NVarChar(100), `%${q.trim()}%`)
-      .query(`
-        SELECT d.id, d.nombre, d.celular,
-               l.nombre AS lider_nombre,
-               g.nombre AS grupo_nombre
-        FROM Discipulos d
-        JOIN Lideres l ON d.lider_id = l.id
-        LEFT JOIN Grupos g ON d.grupo_id = g.id
-        WHERE d.activo = 1 AND d.nombre LIKE @q
-        ORDER BY d.nombre
-      `);
-    res.json({ discipulos: result.recordset });
-  } catch (err) {
-    console.error('Error buscar discipulos:', err);
-    res.status(500).json({ error: 'Error en servidor' });
-  }
-});
 
 app.get('/api/entrevistas/discipulo/:discipulo_id', async (req, res) => {
   try {

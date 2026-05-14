@@ -249,8 +249,13 @@
       <span class="modal-title">Buscar discípulo</span>
       <button class="modal-close" onclick="closeBuscarDiscModal()">×</button>
     </div>
-    <input type="text" id="buscarDiscInput" class="mini-inp" placeholder="Nombre del discípulo..." oninput="buscarDisc(this.value)" style="margin-bottom:10px">
-    <div id="buscarDiscResults" style="border:1px solid var(--border);border-radius:var(--radius-sm);max-height:300px;overflow-y:auto;min-height:48px"></div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+      <select id="buscarLiderSelect" class="mini-inp" onchange="buscarDiscFiltrar()">
+        <option value="">Todos los líderes</option>
+      </select>
+      <input type="text" id="buscarDiscInput" class="mini-inp" placeholder="Nombre (opcional si elegiste líder)..." oninput="buscarDiscFiltrar()">
+    </div>
+    <div id="buscarDiscResults" style="border:1px solid var(--border);border-radius:var(--radius-sm);max-height:320px;overflow-y:auto;min-height:48px"></div>
   </div>
 </div>
 
@@ -1147,10 +1152,22 @@
 
   // ==================== BÚSQUEDA PASTORAL ====================
 
-  function openBuscarDiscModal() {
+  async function openBuscarDiscModal() {
     document.getElementById('buscarDiscInput').value = '';
-    document.getElementById('buscarDiscResults').innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:13px">Escribí un nombre para buscar</div>';
+    document.getElementById('buscarDiscResults').innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:13px">Seleccioná un líder o escribí un nombre</div>';
     document.getElementById('modalBuscarDisc').classList.add('open');
+    const sel = document.getElementById('buscarLiderSelect');
+    sel.innerHTML = '<option value="">Todos los líderes</option>';
+    try {
+      const res = await fetch(`${API_URL}/lideres/activos?lider_id=${lider.id}`);
+      const data = await res.json();
+      (data.lideres || []).forEach(l => {
+        const opt = document.createElement('option');
+        opt.value = l.id;
+        opt.textContent = l.nombre;
+        sel.appendChild(opt);
+      });
+    } catch (e) { /* sin filtro de líder si falla */ }
     setTimeout(() => document.getElementById('buscarDiscInput').focus(), 50);
   }
 
@@ -1159,17 +1176,25 @@
   }
 
   let buscarTimer = null;
-  function buscarDisc(q) {
+  function buscarDiscFiltrar() {
     clearTimeout(buscarTimer);
-    const container = document.getElementById('buscarDiscResults');
-    if (q.trim().length < 2) {
-      container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:13px">Escribí al menos 2 letras</div>';
+    const q            = document.getElementById('buscarDiscInput').value;
+    const filtroLider  = document.getElementById('buscarLiderSelect').value;
+    const container    = document.getElementById('buscarDiscResults');
+    const tieneNombre  = q.trim().length >= 2;
+    const tieneLider   = !!filtroLider;
+
+    if (!tieneNombre && !tieneLider) {
+      container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:13px">Seleccioná un líder o escribí al menos 2 letras</div>';
       return;
     }
     container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:13px">Buscando...</div>';
     buscarTimer = setTimeout(async () => {
       try {
-        const res = await fetch(`${API_URL}/discipulos/buscar?q=${encodeURIComponent(q)}&lider_id=${lider.id}`);
+        const params = new URLSearchParams({ lider_id: lider.id });
+        if (tieneNombre)  params.append('q', q.trim());
+        if (tieneLider)   params.append('filtro_lider_id', filtroLider);
+        const res = await fetch(`${API_URL}/discipulos/buscar?${params}`);
         const data = await res.json();
         if (!data.discipulos?.length) {
           container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:13px">Sin resultados</div>';
@@ -1183,7 +1208,7 @@
       } catch (err) {
         container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--red);font-size:13px">Error al buscar</div>';
       }
-    }, 350);
+    }, 300);
   }
 
   function seleccionarDiscPastoral(discId, nombre) {
