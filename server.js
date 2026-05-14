@@ -775,19 +775,66 @@ app.get('/api/stats/persona/:discipulo_id', async (req, res) => {
 
 // ==================== ENTREVISTAS ====================
 
+async function getRolLider(lider_id) {
+  const r = await pool.request()
+    .input('id', sql.Int, parseInt(lider_id))
+    .query('SELECT rol FROM Lideres WHERE id = @id AND activo = 1');
+  return r.recordset[0]?.rol || 'lider';
+}
+
+function esPastoral(rol) { return rol === 'pastoral' || rol === 'admin'; }
+
+// Búsqueda de discípulos (solo pastoral/admin)
+app.get('/api/discipulos/buscar', async (req, res) => {
+  try {
+    const { q, lider_id } = req.query;
+    const rol = await getRolLider(lider_id);
+    if (!esPastoral(rol)) return res.status(403).json({ error: 'Sin permisos' });
+    if (!q || q.trim().length < 2) return res.json({ discipulos: [] });
+    const result = await pool.request()
+      .input('q', sql.NVarChar(100), `%${q.trim()}%`)
+      .query(`
+        SELECT d.id, d.nombre, d.celular,
+               l.nombre AS lider_nombre,
+               g.nombre AS grupo_nombre
+        FROM Discipulos d
+        JOIN Lideres l ON d.lider_id = l.id
+        LEFT JOIN Grupos g ON d.grupo_id = g.id
+        WHERE d.activo = 1 AND d.nombre LIKE @q
+        ORDER BY d.nombre
+      `);
+    res.json({ discipulos: result.recordset });
+  } catch (err) {
+    console.error('Error buscar discipulos:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
 app.get('/api/entrevistas/discipulo/:discipulo_id', async (req, res) => {
   try {
     const { discipulo_id } = req.params;
+    const { lider_id } = req.query;
+    // Verificar acceso: propio grupo o rol pastoral/admin
+    const rol = lider_id ? await getRolLider(lider_id) : 'lider';
+    if (!esPastoral(rol) && lider_id) {
+      const chk = await pool.request()
+        .input('discipulo_id', sql.Int, parseInt(discipulo_id))
+        .input('lider_id',     sql.Int, parseInt(lider_id))
+        .query('SELECT id FROM Discipulos WHERE id = @discipulo_id AND lider_id = @lider_id AND activo = 1');
+      if (!chk.recordset.length) return res.status(403).json({ error: 'Sin permisos' });
+    }
     const result = await pool.request()
       .input('discipulo_id', sql.Int, parseInt(discipulo_id))
       .query(`
-        SELECT id,
-               CONVERT(VARCHAR(10), fecha, 23) AS fecha,
-               horario, lugar, temas,
-               CONVERT(VARCHAR(10), created_at, 23) AS created_at
-        FROM Entrevistas
-        WHERE discipulo_id = @discipulo_id
-        ORDER BY fecha DESC, created_at DESC
+        SELECT e.id,
+               CONVERT(VARCHAR(10), e.fecha, 23) AS fecha,
+               e.horario, e.lugar, e.temas,
+               l.nombre AS entrevistador,
+               CONVERT(VARCHAR(10), e.created_at, 23) AS created_at
+        FROM Entrevistas e
+        JOIN Lideres l ON e.lider_id = l.id
+        WHERE e.discipulo_id = @discipulo_id
+        ORDER BY e.fecha DESC, e.created_at DESC
       `);
     res.json({ entrevistas: result.recordset });
   } catch (err) {
@@ -799,23 +846,35 @@ app.get('/api/entrevistas/discipulo/:discipulo_id', async (req, res) => {
 app.post('/api/entrevistas', async (req, res) => {
   try {
     const { discipulo_id, grupo_id, lider_id, fecha, horario, lugar, temas } = req.body;
-    if (!discipulo_id || !grupo_id || !lider_id || !fecha) {
+    if (!discipulo_id || !lider_id || !fecha) {
       return res.status(400).json({ error: 'Faltan campos requeridos' });
     }
-    // Verify disciple belongs to this grupo
-    const chk = await pool.request()
-      .input('discipulo_id', sql.Int, parseInt(discipulo_id))
-      .input('grupo_id', sql.Int, parseInt(grupo_id))
-      .query('SELECT id FROM Discipulos WHERE id = @discipulo_id AND grupo_id = @grupo_id AND activo = 1');
-    if (!chk.recordset.length) return res.status(403).json({ error: 'Discípulo no pertenece a este GC' });
+    const rol = await getRolLider(lider_id);
+
+    // Resolver grupo_id: pastoral puede no enviar grupo_id
+    let resolvedGrupoId = grupo_id ? parseInt(grupo_id) : null;
+    if (!esPastoral(rol)) {
+      // Lider normal: verificar que el discípulo pertenece a su grupo
+      const chk = await pool.request()
+        .input('discipulo_id', sql.Int, parseInt(discipulo_id))
+        .input('grupo_id',     sql.Int, resolvedGrupoId)
+        .query('SELECT id FROM Discipulos WHERE id = @discipulo_id AND grupo_id = @grupo_id AND activo = 1');
+      if (!chk.recordset.length) return res.status(403).json({ error: 'Discípulo no pertenece a este GC' });
+    } else if (!resolvedGrupoId) {
+      // Pastoral sin grupo_id: obtener grupo del discípulo
+      const d = await pool.request()
+        .input('id', sql.Int, parseInt(discipulo_id))
+        .query('SELECT grupo_id FROM Discipulos WHERE id = @id AND activo = 1');
+      resolvedGrupoId = d.recordset[0]?.grupo_id || null;
+    }
 
     const result = await pool.request()
       .input('discipulo_id', sql.Int, parseInt(discipulo_id))
-      .input('grupo_id',     sql.Int, parseInt(grupo_id))
+      .input('grupo_id',     sql.Int, resolvedGrupoId)
       .input('lider_id',     sql.Int, parseInt(lider_id))
       .input('fecha',        sql.Date, fecha)
-      .input('horario',      sql.NVarChar(10),  horario  || null)
-      .input('lugar',        sql.NVarChar(100), lugar    || null)
+      .input('horario',      sql.NVarChar(10),  horario || null)
+      .input('lugar',        sql.NVarChar(100), lugar   || null)
       .input('temas',        sql.NVarChar(sql.MAX), temas || null)
       .query(`
         INSERT INTO Entrevistas (discipulo_id, grupo_id, lider_id, fecha, horario, lugar, temas)
@@ -833,12 +892,14 @@ app.put('/api/entrevistas/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { lider_id, fecha, horario, lugar, temas } = req.body;
-    const chk = await pool.request()
-      .input('id',       sql.Int, parseInt(id))
-      .input('lider_id', sql.Int, parseInt(lider_id))
-      .query('SELECT id FROM Entrevistas WHERE id = @id AND lider_id = @lider_id');
-    if (!chk.recordset.length) return res.status(403).json({ error: 'Sin permisos' });
-
+    const rol = await getRolLider(lider_id);
+    if (!esPastoral(rol)) {
+      const chk = await pool.request()
+        .input('id',       sql.Int, parseInt(id))
+        .input('lider_id', sql.Int, parseInt(lider_id))
+        .query('SELECT id FROM Entrevistas WHERE id = @id AND lider_id = @lider_id');
+      if (!chk.recordset.length) return res.status(403).json({ error: 'Sin permisos' });
+    }
     await pool.request()
       .input('id',      sql.Int, parseInt(id))
       .input('fecha',   sql.Date, fecha)
@@ -857,12 +918,14 @@ app.delete('/api/entrevistas/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { lider_id } = req.body;
-    const chk = await pool.request()
-      .input('id',       sql.Int, parseInt(id))
-      .input('lider_id', sql.Int, parseInt(lider_id))
-      .query('SELECT id FROM Entrevistas WHERE id = @id AND lider_id = @lider_id');
-    if (!chk.recordset.length) return res.status(403).json({ error: 'Sin permisos' });
-
+    const rol = await getRolLider(lider_id);
+    if (!esPastoral(rol)) {
+      const chk = await pool.request()
+        .input('id',       sql.Int, parseInt(id))
+        .input('lider_id', sql.Int, parseInt(lider_id))
+        .query('SELECT id FROM Entrevistas WHERE id = @id AND lider_id = @lider_id');
+      if (!chk.recordset.length) return res.status(403).json({ error: 'Sin permisos' });
+    }
     await pool.request()
       .input('id', sql.Int, parseInt(id))
       .query('DELETE FROM Entrevistas WHERE id = @id');

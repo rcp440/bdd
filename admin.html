@@ -30,6 +30,7 @@
     .leader-sub { font-size: 11px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px; margin-right: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
     .badge-admin { background: var(--purple-bg); color: var(--purple); }
+    .badge-pastoral { background: #e8f5e9; color: #2e7d32; }
     .badge-lider { background: var(--border); color: var(--muted); }
     .badge-activo { background: var(--green-bg); color: var(--green); }
     .badge-inactivo { background: var(--red-bg); color: var(--red); }
@@ -117,6 +118,7 @@
         <label>Rol</label>
         <select id="fRol">
           <option value="lider">Líder</option>
+          <option value="pastoral">Pastoral</option>
           <option value="admin">Administrador</option>
         </select>
       </div>
@@ -183,6 +185,7 @@
       <label>Rol</label>
       <select id="eRol">
         <option value="lider">Líder</option>
+        <option value="pastoral">Pastoral</option>
         <option value="admin">Administrador</option>
       </select>
     </div>
@@ -234,14 +237,14 @@
       lideresCached = data.lideres;
       container.innerHTML = data.lideres.map((l, i) => `
         <div class="leader-card">
-          <div class="avatar" style="background:${l.rol === 'admin' ? 'var(--purple);color:#fff' : 'var(--purple-bg);color:var(--purple)'}">
+          <div class="avatar" style="background:${l.rol === 'admin' ? 'var(--purple);color:#fff' : l.rol === 'pastoral' ? '#2e7d32;color:#fff' : 'var(--purple-bg);color:var(--purple)'}">
             ${initials(l.nombre)}
           </div>
           <div class="leader-info">
             <div class="leader-name">${l.nombre}</div>
             <div class="leader-sub">${l.usuario} · ${l.email}${l.fecha_nacimiento ? ' · ' + fmtFecha(l.fecha_nacimiento) : ''}</div>
             <div style="margin-top:4px">
-              <span class="badge ${l.rol === 'admin' ? 'badge-admin' : 'badge-lider'}">${l.rol}</span>
+              <span class="badge ${l.rol === 'admin' ? 'badge-admin' : l.rol === 'pastoral' ? 'badge-pastoral' : 'badge-lider'}">${l.rol}</span>
               <span class="badge ${l.activo ? 'badge-activo' : 'badge-inactivo'}">${l.activo ? 'activo' : 'inactivo'}</span>
             </div>
           </div>

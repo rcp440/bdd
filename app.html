@@ -148,6 +148,10 @@
     .entrevista-temas { font-size: 13px; color: var(--text); margin-top: 8px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
     .entrevista-btn { background: none; border: none; cursor: pointer; font-size: 12px; color: var(--muted); padding: 2px 6px; }
     .entrevista-btn:hover { color: var(--red); }
+    .entrevistador-tag { font-size: 10px; color: var(--purple); font-weight: 600; margin-top: 2px; }
+    .buscar-disc-result { padding: 10px 12px; border-radius: var(--radius-sm); cursor: pointer; border-bottom: 1px solid var(--border); }
+    .buscar-disc-result:hover { background: var(--purple-bg); }
+    .buscar-disc-result:last-child { border-bottom: none; }
   </style>
 </head>
 <body>
@@ -205,6 +209,17 @@
 
 <div class="toast" id="toast"></div>
 <div id="printReport"></div>
+
+<div class="modal-overlay" id="modalBuscarDisc" onclick="if(event.target===this)closeBuscarDiscModal()">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <span class="modal-title">Buscar discípulo</span>
+      <button class="modal-close" onclick="closeBuscarDiscModal()">×</button>
+    </div>
+    <input type="text" id="buscarDiscInput" class="mini-inp" placeholder="Nombre del discípulo..." oninput="buscarDisc(this.value)" style="margin-bottom:10px">
+    <div id="buscarDiscResults" style="border:1px solid var(--border);border-radius:var(--radius-sm);max-height:300px;overflow-y:auto;min-height:48px"></div>
+  </div>
+</div>
 
 <div class="modal-overlay" id="modalEntrevista" onclick="if(event.target===this)closeEntrevistaModal()">
   <div class="modal" style="max-width:480px;max-height:85vh;overflow-y:auto">
@@ -357,6 +372,14 @@
     const nav = document.getElementById('adminNav');
     nav.style.display = 'flex';
     nav.innerHTML = '<a href="stats.html" class="nav-btn">Estadísticas</a><a href="admin.html" class="nav-btn">Admin</a>';
+  }
+
+  if (lider.rol === 'pastoral' || lider.rol === 'admin') {
+    const btn = document.createElement('button');
+    btn.className = 'nav-btn';
+    btn.textContent = '🔍 Pastoral';
+    btn.onclick = openBuscarDiscModal;
+    document.querySelector('.list-header div').prepend(btn);
   }
 
   function showGrupoSelector() {
@@ -1127,6 +1150,52 @@
     } catch (err) { selectEl.value = ''; toast('Error de conexión', 'err'); }
   }
 
+  // ==================== BÚSQUEDA PASTORAL ====================
+
+  function openBuscarDiscModal() {
+    document.getElementById('buscarDiscInput').value = '';
+    document.getElementById('buscarDiscResults').innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:13px">Escribí un nombre para buscar</div>';
+    document.getElementById('modalBuscarDisc').classList.add('open');
+    setTimeout(() => document.getElementById('buscarDiscInput').focus(), 50);
+  }
+
+  function closeBuscarDiscModal() {
+    document.getElementById('modalBuscarDisc').classList.remove('open');
+  }
+
+  let buscarTimer = null;
+  function buscarDisc(q) {
+    clearTimeout(buscarTimer);
+    const container = document.getElementById('buscarDiscResults');
+    if (q.trim().length < 2) {
+      container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:13px">Escribí al menos 2 letras</div>';
+      return;
+    }
+    container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:13px">Buscando...</div>';
+    buscarTimer = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API_URL}/discipulos/buscar?q=${encodeURIComponent(q)}&lider_id=${lider.id}`);
+        const data = await res.json();
+        if (!data.discipulos?.length) {
+          container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:13px">Sin resultados</div>';
+          return;
+        }
+        container.innerHTML = data.discipulos.map(d => `
+          <div class="buscar-disc-result" onclick="seleccionarDiscPastoral(${d.id}, '${d.nombre.replace(/'/g,"\\'")}')">
+            <div style="font-size:13px;font-weight:600">${d.nombre}</div>
+            <div style="font-size:11px;color:var(--muted)">${d.lider_nombre} · ${d.grupo_nombre || 'Sin GC'}</div>
+          </div>`).join('');
+      } catch (err) {
+        container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--red);font-size:13px">Error al buscar</div>';
+      }
+    }, 350);
+  }
+
+  function seleccionarDiscPastoral(discId, nombre) {
+    closeBuscarDiscModal();
+    openEntrevistaModal(discId, nombre, true);
+  }
+
   // ==================== ALERTA DÍA ====================
 
   function checkDiaAlert() {
@@ -1146,9 +1215,11 @@
   // ==================== ENTREVISTAS ====================
 
   let entrevistaDiscId = null;
+  let entrevistaEsPastoral = false;
 
-  function openEntrevistaModal(discId, nombre) {
+  function openEntrevistaModal(discId, nombre, esPastoralFlag = false) {
     entrevistaDiscId = discId;
+    entrevistaEsPastoral = esPastoralFlag;
     document.getElementById('entrevistaNombre').textContent = nombre;
     document.getElementById('nuevaEntrevistaForm').style.display = 'none';
     document.getElementById('btnNuevaEntrevista').style.display = 'inline-block';
@@ -1171,7 +1242,7 @@
     const container = document.getElementById('entrevistaList');
     container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted)">Cargando...</div>';
     try {
-      const res = await fetch(`${API_URL}/entrevistas/discipulo/${entrevistaDiscId}`);
+      const res = await fetch(`${API_URL}/entrevistas/discipulo/${entrevistaDiscId}?lider_id=${lider.id}`);
       const data = await res.json();
       renderEntrevistas(data.entrevistas || []);
     } catch (err) {
@@ -1199,6 +1270,7 @@
             <div>
               <div class="entrevista-fecha">${fmtFechaCorta(e.fecha)}</div>
               ${meta ? `<div class="entrevista-meta">${meta}</div>` : ''}
+              ${e.entrevistador ? `<div class="entrevistador-tag">por ${e.entrevistador}</div>` : ''}
             </div>
             <button class="entrevista-btn" title="Eliminar" onclick="eliminarEntrevista(${e.id})">✕</button>
           </div>
@@ -1227,7 +1299,7 @@
       const res = await fetch(`${API_URL}/entrevistas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discipulo_id: entrevistaDiscId, grupo_id: grupo.id, lider_id: lider.id, fecha, horario, lugar, temas })
+        body: JSON.stringify({ discipulo_id: entrevistaDiscId, grupo_id: entrevistaEsPastoral ? null : grupo?.id, lider_id: lider.id, fecha, horario, lugar, temas })
       });
       if (res.ok) {
         document.getElementById('nuevaEntrevistaForm').style.display = 'none';
