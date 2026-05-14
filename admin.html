@@ -134,14 +134,25 @@
       <button class="modal-close" onclick="document.getElementById('modalGrupos').classList.remove('open')">×</button>
     </div>
     <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
-      <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Células</span>
-      <button class="mini-btn" onclick="toggleNuevoGrupoForm()">+ Nueva célula</button>
+      <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">GC</span>
+      <button class="mini-btn" onclick="toggleNuevoGrupoForm()">+ Nuevo GC</button>
     </div>
     <div id="nuevoGrupoForm" style="display:none;margin-bottom:12px">
-      <div style="display:flex;gap:6px">
-        <input type="text" id="ngNombre" class="mini-input" placeholder="Nombre de la célula" onkeydown="if(event.key==='Enter')crearGrupo()">
-        <button class="mini-btn" onclick="crearGrupo()">Crear</button>
-        <button class="mini-btn-ghost" onclick="toggleNuevoGrupoForm()">✕</button>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <input type="text" id="ngNombre" class="mini-input" placeholder="Nombre del GC">
+        <div style="display:flex;gap:6px">
+          <select id="ngDia" class="mini-input" style="flex:1">
+            <option value="">Día...</option>
+            <option>Lunes</option><option>Martes</option><option>Miércoles</option>
+            <option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option>
+          </select>
+          <input type="time" id="ngHorario" class="mini-input" style="flex:0 0 auto;width:100px">
+        </div>
+        <input type="text" id="ngLugar" class="mini-input" placeholder="Lugar">
+        <div style="display:flex;gap:6px">
+          <button class="mini-btn" style="flex:1" onclick="crearGrupo()">Crear GC</button>
+          <button class="mini-btn-ghost" onclick="toggleNuevoGrupoForm()">Cancelar</button>
+        </div>
       </div>
       <div id="ngMsg" class="msg" style="margin-top:6px"></div>
     </div>
@@ -431,7 +442,7 @@
       gruposData = data.grupos || [];
 
       if (!gruposData.length) {
-        container.innerHTML = '<div class="empty">Sin grupos. Creá la primera célula.</div>';
+        container.innerHTML = '<div class="empty">Sin GC. Creá el primero.</div>';
         return;
       }
 
@@ -447,10 +458,13 @@
     }
   }
 
+  const DIAS_ADMIN = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+
   function renderGrupos() {
     const container = document.getElementById('gruposContainer');
     container.innerHTML = gruposData.map(g => {
       const otrosGrupos = gruposData.filter(og => og.id !== g.id);
+      const info = [g.dia, g.horario, g.lugar].filter(Boolean).join(' · ');
       const discsHtml = g.discipulos.length
         ? g.discipulos.map(d => `
             <div class="disc-row">
@@ -463,20 +477,34 @@
             </div>`).join('')
         : '<div style="color:var(--muted);font-size:12px;padding:4px 0">Sin discípulos</div>';
 
+      const diasOpts = DIAS_ADMIN.map(d => `<option${g.dia===d?' selected':''}>${d}</option>`).join('');
+
       return `
         <div class="grupo-card">
           <div class="grupo-header">
-            <span class="grupo-nombre" id="gname-${g.id}">${g.nombre}</span>
+            <div>
+              <span class="grupo-nombre" id="gname-${g.id}">${g.nombre}</span>
+              ${info ? `<div style="font-size:10px;color:var(--muted);margin-top:2px">${info}</div>` : ''}
+            </div>
             <div style="display:flex;gap:4px">
-              <button class="action-btn edit" style="font-size:12px" onclick="iniciarRenombrar(${g.id})">✏ Renombrar</button>
+              <button class="action-btn edit" style="font-size:12px" onclick="iniciarRenombrar(${g.id})">✏ Editar</button>
               <button class="action-btn" style="font-size:12px" onclick="confirmarDesactivarGrupo(${g.id})">✗</button>
             </div>
           </div>
           <div id="grename-${g.id}" style="display:none;margin-bottom:8px">
-            <div style="display:flex;gap:6px">
-              <input type="text" id="ri-${g.id}" class="mini-input" value="${g.nombre}" onkeydown="if(event.key==='Enter')guardarRenombrar(${g.id})">
-              <button class="mini-btn" onclick="guardarRenombrar(${g.id})">OK</button>
-              <button class="mini-btn-ghost" onclick="cancelarRenombrar(${g.id})">✕</button>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <input type="text" id="ri-n-${g.id}" class="mini-input" value="${g.nombre}" placeholder="Nombre del GC">
+              <div style="display:flex;gap:6px">
+                <select id="ri-d-${g.id}" class="mini-input" style="flex:1">
+                  <option value="">Día...</option>${diasOpts}
+                </select>
+                <input type="time" id="ri-h-${g.id}" class="mini-input" style="flex:0 0 auto;width:100px" value="${g.horario||''}">
+              </div>
+              <input type="text" id="ri-l-${g.id}" class="mini-input" value="${g.lugar||''}" placeholder="Lugar">
+              <div style="display:flex;gap:6px">
+                <button class="mini-btn" style="flex:1" onclick="guardarRenombrar(${g.id})">Guardar</button>
+                <button class="mini-btn-ghost" onclick="cancelarRenombrar(${g.id})">Cancelar</button>
+              </div>
             </div>
           </div>
           <div style="margin-bottom:8px">${discsHtml}</div>
@@ -497,32 +525,33 @@
   }
 
   function iniciarRenombrar(grupoId) {
-    document.getElementById(`gname-${grupoId}`).style.display = 'none';
     document.getElementById(`grename-${grupoId}`).style.display = 'block';
-    document.getElementById(`ri-${grupoId}`).focus();
+    document.getElementById(`ri-n-${grupoId}`).focus();
   }
 
   function cancelarRenombrar(grupoId) {
-    document.getElementById(`gname-${grupoId}`).style.display = '';
     document.getElementById(`grename-${grupoId}`).style.display = 'none';
   }
 
   async function guardarRenombrar(grupoId) {
-    const nombre = document.getElementById(`ri-${grupoId}`).value.trim();
+    const nombre = document.getElementById(`ri-n-${grupoId}`).value.trim();
+    const dia = document.getElementById(`ri-d-${grupoId}`).value;
+    const horario = document.getElementById(`ri-h-${grupoId}`).value;
+    const lugar = document.getElementById(`ri-l-${grupoId}`).value.trim();
     if (!nombre) return;
     try {
       const res = await fetch(`${API_URL}/grupos/${grupoId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lider_id: gruposLiderId, nombre })
+        body: JSON.stringify({ lider_id: gruposLiderId, nombre, dia, horario, lugar })
       });
       if (res.ok) {
         const g = gruposData.find(g => g.id === grupoId);
-        if (g) g.nombre = nombre;
-        document.getElementById(`gname-${grupoId}`).textContent = nombre;
+        if (g) { g.nombre = nombre; g.dia = dia; g.horario = horario; g.lugar = lugar; }
         cancelarRenombrar(grupoId);
+        renderGrupos();
       }
-    } catch (err) { alert('Error al renombrar'); }
+    } catch (err) { alert('Error al guardar GC'); }
   }
 
   async function confirmarDesactivarGrupo(grupoId) {
@@ -540,13 +569,16 @@
 
   async function crearGrupo() {
     const nombre = document.getElementById('ngNombre').value.trim();
+    const dia = document.getElementById('ngDia').value;
+    const horario = document.getElementById('ngHorario').value;
+    const lugar = document.getElementById('ngLugar').value.trim();
     const msg = document.getElementById('ngMsg');
     if (!nombre) { msg.textContent = 'Ingresá un nombre'; msg.className = 'msg err'; return; }
     try {
       const res = await fetch(`${API_URL}/grupos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lider_id: gruposLiderId, nombre })
+        body: JSON.stringify({ lider_id: gruposLiderId, nombre, dia, horario, lugar })
       });
       if (res.ok) {
         document.getElementById('ngNombre').value = '';

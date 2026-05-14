@@ -66,7 +66,7 @@ app.post('/api/login', async (req, res) => {
     const rGrupos = pool.request();
     rGrupos.input('lider_id', sql.Int, lider.id);
     const grupos = await rGrupos.query(
-      'SELECT id, nombre FROM Grupos WHERE lider_id = @lider_id AND activo = 1 ORDER BY nombre'
+      'SELECT id, nombre, dia, horario, lugar FROM Grupos WHERE lider_id = @lider_id AND activo = 1 ORDER BY nombre'
     );
 
     res.json({
@@ -124,7 +124,7 @@ app.get('/api/grupos/:lider_id', async (req, res) => {
   try {
     const r = await pool.request()
       .input('lider_id', sql.Int, parseInt(req.params.lider_id))
-      .query('SELECT id, nombre FROM Grupos WHERE lider_id = @lider_id AND activo = 1 ORDER BY nombre');
+      .query('SELECT id, nombre, dia, horario, lugar FROM Grupos WHERE lider_id = @lider_id AND activo = 1 ORDER BY nombre');
     res.json({ grupos: r.recordset });
   } catch (err) {
     console.error('Error listando grupos:', err);
@@ -134,7 +134,7 @@ app.get('/api/grupos/:lider_id', async (req, res) => {
 
 app.post('/api/grupos', async (req, res) => {
   try {
-    const { lider_id, nombre } = req.body;
+    const { lider_id, nombre, dia, horario, lugar } = req.body;
     if (!lider_id || !nombre) return res.status(400).json({ error: 'lider_id y nombre requeridos' });
     const chk = await pool.request()
       .input('id', sql.Int, parseInt(lider_id))
@@ -143,17 +143,20 @@ app.post('/api/grupos', async (req, res) => {
     const r = await pool.request()
       .input('lider_id', sql.Int, parseInt(lider_id))
       .input('nombre', sql.VarChar, nombre)
-      .query('INSERT INTO Grupos (lider_id, nombre) VALUES (@lider_id, @nombre); SELECT CAST(SCOPE_IDENTITY() AS INT) AS id');
+      .input('dia', sql.VarChar, dia || null)
+      .input('horario', sql.VarChar, horario || null)
+      .input('lugar', sql.VarChar, lugar || null)
+      .query('INSERT INTO Grupos (lider_id, nombre, dia, horario, lugar) VALUES (@lider_id, @nombre, @dia, @horario, @lugar); SELECT CAST(SCOPE_IDENTITY() AS INT) AS id');
     res.json({ ok: true, id: r.recordset[0].id });
   } catch (err) {
-    console.error('Error creando grupo:', err);
+    console.error('Error creando GC:', err);
     res.status(500).json({ error: 'Error en servidor' });
   }
 });
 
 app.put('/api/grupos/:id', async (req, res) => {
   try {
-    const { lider_id, nombre } = req.body;
+    const { lider_id, nombre, dia, horario, lugar } = req.body;
     if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
     const chk = await pool.request()
       .input('id', sql.Int, parseInt(req.params.id))
@@ -163,10 +166,13 @@ app.put('/api/grupos/:id', async (req, res) => {
     await pool.request()
       .input('id', sql.Int, parseInt(req.params.id))
       .input('nombre', sql.VarChar, nombre)
-      .query('UPDATE Grupos SET nombre = @nombre WHERE id = @id');
+      .input('dia', sql.VarChar, dia || null)
+      .input('horario', sql.VarChar, horario || null)
+      .input('lugar', sql.VarChar, lugar || null)
+      .query('UPDATE Grupos SET nombre=@nombre, dia=@dia, horario=@horario, lugar=@lugar WHERE id=@id');
     res.json({ ok: true });
   } catch (err) {
-    console.error('Error renombrando grupo:', err);
+    console.error('Error editando GC:', err);
     res.status(500).json({ error: 'Error en servidor' });
   }
 });
@@ -763,6 +769,106 @@ app.get('/api/stats/persona/:discipulo_id', async (req, res) => {
     res.json({ registros: registros.recordset, discipulo: disc.recordset[0] });
   } catch (err) {
     console.error('Error stats persona:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
+// ==================== ENTREVISTAS ====================
+
+app.get('/api/entrevistas/discipulo/:discipulo_id', async (req, res) => {
+  try {
+    const { discipulo_id } = req.params;
+    const result = await pool.request()
+      .input('discipulo_id', sql.Int, parseInt(discipulo_id))
+      .query(`
+        SELECT id,
+               CONVERT(VARCHAR(10), fecha, 23) AS fecha,
+               horario, lugar, temas,
+               CONVERT(VARCHAR(10), created_at, 23) AS created_at
+        FROM Entrevistas
+        WHERE discipulo_id = @discipulo_id
+        ORDER BY fecha DESC, created_at DESC
+      `);
+    res.json({ entrevistas: result.recordset });
+  } catch (err) {
+    console.error('Error get entrevistas:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
+app.post('/api/entrevistas', async (req, res) => {
+  try {
+    const { discipulo_id, grupo_id, lider_id, fecha, horario, lugar, temas } = req.body;
+    if (!discipulo_id || !grupo_id || !lider_id || !fecha) {
+      return res.status(400).json({ error: 'Faltan campos requeridos' });
+    }
+    // Verify disciple belongs to this grupo
+    const chk = await pool.request()
+      .input('discipulo_id', sql.Int, parseInt(discipulo_id))
+      .input('grupo_id', sql.Int, parseInt(grupo_id))
+      .query('SELECT id FROM Discipulos WHERE id = @discipulo_id AND grupo_id = @grupo_id AND activo = 1');
+    if (!chk.recordset.length) return res.status(403).json({ error: 'Discípulo no pertenece a este GC' });
+
+    const result = await pool.request()
+      .input('discipulo_id', sql.Int, parseInt(discipulo_id))
+      .input('grupo_id',     sql.Int, parseInt(grupo_id))
+      .input('lider_id',     sql.Int, parseInt(lider_id))
+      .input('fecha',        sql.Date, fecha)
+      .input('horario',      sql.NVarChar(10),  horario  || null)
+      .input('lugar',        sql.NVarChar(100), lugar    || null)
+      .input('temas',        sql.NVarChar(sql.MAX), temas || null)
+      .query(`
+        INSERT INTO Entrevistas (discipulo_id, grupo_id, lider_id, fecha, horario, lugar, temas)
+        OUTPUT INSERTED.id
+        VALUES (@discipulo_id, @grupo_id, @lider_id, @fecha, @horario, @lugar, @temas)
+      `);
+    res.status(201).json({ id: result.recordset[0].id });
+  } catch (err) {
+    console.error('Error post entrevista:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
+app.put('/api/entrevistas/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { lider_id, fecha, horario, lugar, temas } = req.body;
+    const chk = await pool.request()
+      .input('id',       sql.Int, parseInt(id))
+      .input('lider_id', sql.Int, parseInt(lider_id))
+      .query('SELECT id FROM Entrevistas WHERE id = @id AND lider_id = @lider_id');
+    if (!chk.recordset.length) return res.status(403).json({ error: 'Sin permisos' });
+
+    await pool.request()
+      .input('id',      sql.Int, parseInt(id))
+      .input('fecha',   sql.Date, fecha)
+      .input('horario', sql.NVarChar(10),  horario || null)
+      .input('lugar',   sql.NVarChar(100), lugar   || null)
+      .input('temas',   sql.NVarChar(sql.MAX), temas || null)
+      .query('UPDATE Entrevistas SET fecha=@fecha, horario=@horario, lugar=@lugar, temas=@temas WHERE id=@id');
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error put entrevista:', err);
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
+app.delete('/api/entrevistas/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { lider_id } = req.body;
+    const chk = await pool.request()
+      .input('id',       sql.Int, parseInt(id))
+      .input('lider_id', sql.Int, parseInt(lider_id))
+      .query('SELECT id FROM Entrevistas WHERE id = @id AND lider_id = @lider_id');
+    if (!chk.recordset.length) return res.status(403).json({ error: 'Sin permisos' });
+
+    await pool.request()
+      .input('id', sql.Int, parseInt(id))
+      .query('DELETE FROM Entrevistas WHERE id = @id');
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error delete entrevista:', err);
     res.status(500).json({ error: 'Error en servidor' });
   }
 });

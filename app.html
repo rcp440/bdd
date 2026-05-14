@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>Asistencia al Grupo</title>
+  <title>Asistencia GC</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
@@ -139,6 +139,15 @@
     .mini-inp:focus { border-color: var(--purple); }
     .mini-btn { background: var(--purple); color: #fff; border: none; border-radius: var(--radius-sm); padding: 7px 12px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
     .mini-btn-g { background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 10px; font-size: 12px; cursor: pointer; }
+    .dia-alert { background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 10px 14px; margin: 0 0 10px; display: none; }
+    .dia-alert-text { font-size: 13px; color: #7a5800; }
+    .dia-alert-close { float: right; background: none; border: none; cursor: pointer; font-size: 18px; color: #7a5800; padding: 0; line-height: 1; margin-left: 8px; }
+    .entrevista-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 8px; }
+    .entrevista-fecha { font-size: 12px; font-weight: 600; color: var(--text); }
+    .entrevista-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .entrevista-temas { font-size: 13px; color: var(--text); margin-top: 8px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+    .entrevista-btn { background: none; border: none; cursor: pointer; font-size: 12px; color: var(--muted); padding: 2px 6px; }
+    .entrevista-btn:hover { color: var(--red); }
   </style>
 </head>
 <body>
@@ -146,7 +155,7 @@
   <div class="header">
     <div class="header-top">
       <div>
-        <h1>Asistencia <span>·</span> al Grupo</h1>
+        <h1>Asistencia <span>·</span> GC</h1>
         <div class="header-info" id="headerInfo"></div>
         <div class="date-pill-wrap" id="datePillWrap">
           <div class="date-pill" id="date-pill"></div>
@@ -170,12 +179,16 @@
   <div class="list-header">
     <span>Discípulos</span>
     <div style="display:flex;gap:10px;align-items:center;">
-      <button class="nav-btn" onclick="openGruposModal()">Grupos</button>
+      <button class="nav-btn" onclick="openGruposModal()">GC</button>
       <button class="nav-btn" onclick="openAddDiscModal()">+ Agregar</button>
       <button onclick="descargarCSV()" title="Descargar CSV" style="font-size:12px;color:var(--green);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;">⬇ CSV</button>
       <button onclick="imprimirPDF()" title="Informe PDF" style="font-size:12px;color:var(--purple);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;">⬇ PDF</button>
       <button id="toggleAllBtn" onclick="toggleAll()">Marcar todos</button>
     </div>
+  </div>
+  <div class="dia-alert" id="diaAlert">
+    <button class="dia-alert-close" onclick="document.getElementById('diaAlert').style.display='none'">×</button>
+    <div class="dia-alert-text" id="diaAlertText"></div>
   </div>
   <div class="list" id="list"></div>
 </div>
@@ -186,28 +199,67 @@
 
 <div id="grupoSelector" class="grupo-selector" style="display:none">
   <h2 id="gsLiderNombre"></h2>
-  <p>Seleccioná el grupo con el que vas a trabajar hoy</p>
+  <p>Seleccioná el GC con el que vas a trabajar hoy</p>
   <div class="grupo-list" id="gsGrupos"></div>
 </div>
 
 <div class="toast" id="toast"></div>
 <div id="printReport"></div>
 
+<div class="modal-overlay" id="modalEntrevista" onclick="if(event.target===this)closeEntrevistaModal()">
+  <div class="modal" style="max-width:480px;max-height:85vh;overflow-y:auto">
+    <div class="modal-header">
+      <span class="modal-title" id="entrevistaNombre">Entrevistas</span>
+      <button class="modal-close" onclick="closeEntrevistaModal()">×</button>
+    </div>
+    <div id="entrevistaList"><div style="text-align:center;padding:16px;color:var(--muted)">Cargando...</div></div>
+    <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+      <button class="mini-btn" onclick="toggleNuevaEntrevistaForm()" id="btnNuevaEntrevista">+ Nueva entrevista</button>
+      <div id="nuevaEntrevistaForm" style="display:none;margin-top:10px">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;gap:6px">
+            <input type="date" id="efFecha" class="mini-inp" style="flex:1">
+            <input type="time" id="efHorario" class="mini-inp" style="flex:0 0 auto;width:100px">
+          </div>
+          <input type="text" id="efLugar" class="mini-inp" placeholder="Lugar (opcional)">
+          <textarea id="efTemas" class="mini-inp" rows="5" placeholder="Temas tratados..." style="resize:vertical;height:auto"></textarea>
+          <div style="display:flex;gap:6px">
+            <button class="mini-btn" style="flex:1" onclick="crearEntrevista()">Guardar</button>
+            <button class="mini-btn-g" onclick="toggleNuevaEntrevistaForm()">Cancelar</button>
+          </div>
+          <div id="efMsg" class="modal-msg"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modalGruposLider" onclick="if(event.target===this)closeGruposModal()">
   <div class="modal" style="max-width:420px;max-height:85vh;overflow-y:auto">
     <div class="modal-header">
-      <span class="modal-title">Mis grupos</span>
+      <span class="modal-title">Mis GC</span>
       <button class="modal-close" onclick="closeGruposModal()">×</button>
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Células</span>
-      <button class="mini-btn" onclick="toggleNuevoGrupoFormApp()">+ Nueva célula</button>
+      <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">GC</span>
+      <button class="mini-btn" onclick="toggleNuevoGrupoFormApp()">+ Nuevo GC</button>
     </div>
     <div id="ngFormApp" style="display:none;margin-bottom:12px">
-      <div style="display:flex;gap:6px">
-        <input type="text" id="ngNombreApp" class="mini-inp" placeholder="Nombre de la célula" onkeydown="if(event.key==='Enter')crearGrupoApp()">
-        <button class="mini-btn" onclick="crearGrupoApp()">Crear</button>
-        <button class="mini-btn-g" onclick="toggleNuevoGrupoFormApp()">✕</button>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <input type="text" id="ngNombreApp" class="mini-inp" placeholder="Nombre del GC">
+        <div style="display:flex;gap:6px">
+          <select id="ngDiaApp" class="mini-inp" style="flex:1">
+            <option value="">Día...</option>
+            <option>Lunes</option><option>Martes</option><option>Miércoles</option>
+            <option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option>
+          </select>
+          <input type="time" id="ngHorarioApp" class="mini-inp" style="flex:0 0 auto;width:100px">
+        </div>
+        <input type="text" id="ngLugarApp" class="mini-inp" placeholder="Lugar">
+        <div style="display:flex;gap:6px">
+          <button class="mini-btn" style="flex:1" onclick="crearGrupoApp()">Crear GC</button>
+          <button class="mini-btn-g" onclick="toggleNuevoGrupoFormApp()">Cancelar</button>
+        </div>
       </div>
       <div id="ngMsgApp" class="modal-msg" style="margin-top:6px"></div>
     </div>
@@ -310,16 +362,22 @@
   function showGrupoSelector() {
     document.getElementById('gsLiderNombre').textContent = lider.nombre;
     const lista = document.getElementById('gsGrupos');
-    lista.innerHTML = grupos.map(g =>
-      `<button class="grupo-btn" onclick="elegirGrupo(${g.id}, ${JSON.stringify(g.nombre).replace(/"/g, '&quot;')})">${g.nombre}</button>`
-    ).join('');
+    lista.innerHTML = grupos.map(g => {
+      const info = [g.dia, g.horario, g.lugar].filter(Boolean).join(' · ');
+      return `<button class="grupo-btn" onclick="elegirGrupo(${g.id})">
+        <div>${g.nombre}</div>
+        ${info ? `<div style="font-size:11px;color:var(--muted);margin-top:3px;font-weight:400">${info}</div>` : ''}
+      </button>`;
+    }).join('');
     document.getElementById('grupoSelector').style.display = 'flex';
   }
 
-  function elegirGrupo(id, nombre) {
-    grupo = { id, nombre };
+  function elegirGrupo(id) {
+    const g = gruposAppData.find(g => g.id === id) || grupos.find(g => g.id === id) || { id };
+    grupo = g;
     sessionStorage.setItem('grupo', JSON.stringify(grupo));
     document.getElementById('grupoSelector').style.display = 'none';
+    document.getElementById('modalGruposLider').classList.remove('open');
     loadDiscipulos();
   }
 
@@ -369,6 +427,7 @@
   function setDate(val) {
     selectedDate = val;
     document.getElementById('date-pill').textContent = todayStr();
+    checkDiaAlert();
     loadReunion();
     loadAsistencia();
   }
@@ -448,6 +507,7 @@
           <button class="bp ${p.status === 'p' ? 'on' : ''}" onclick="people[${i}].status = 'p'; render()">✓</button>
           <button class="ba ${p.status === 'a' ? 'on' : ''}" onclick="people[${i}].status = 'a'; render()">✗</button>
           <button class="edit-disc-btn" onclick="openEditDisc(${i})">✏</button>
+          ${p.id ? `<button class="edit-disc-btn" title="Entrevistas" onclick="openEntrevistaModal(${p.id},'${p.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">📋</button>` : ''}
         </div>
       </div>
     `).join('');
@@ -858,7 +918,7 @@
       const data = await res.json();
       gruposAppData = data.grupos || [];
       if (!gruposAppData.length) {
-        container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">Sin grupos. Creá la primera célula.</div>';
+        container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">Sin GC. Creá el primero.</div>';
         return;
       }
       for (const g of gruposAppData) {
@@ -872,11 +932,14 @@
     }
   }
 
+  const DIAS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+
   function renderGruposApp() {
     const container = document.getElementById('gruposContainerApp');
     container.innerHTML = gruposAppData.map(g => {
       const esCurrent = grupo && grupo.id === g.id;
       const otrosGrupos = gruposAppData.filter(og => og.id !== g.id);
+      const info = [g.dia, g.horario, g.lugar].filter(Boolean).join(' · ');
       const discsHtml = g.discipulos.length
         ? g.discipulos.map(d => `
             <div class="disc-row">
@@ -889,21 +952,35 @@
             </div>`).join('')
         : '<div style="color:var(--muted);font-size:12px;padding:4px 0">Sin discípulos</div>';
 
+      const diasOpts = DIAS.map(d => `<option${g.dia===d?' selected':''}>${d}</option>`).join('');
+
       return `
         <div class="gcard">
           <div class="gcard-header">
-            <span class="gcard-nombre${esCurrent ? ' activo' : ''}" id="gname-${g.id}" title="${esCurrent ? 'Grupo actual' : ''}">${g.nombre}${esCurrent ? ' ✓' : ''}</span>
+            <div>
+              <span class="gcard-nombre${esCurrent ? ' activo' : ''}" id="gname-${g.id}">${g.nombre}${esCurrent ? ' ✓' : ''}</span>
+              ${info ? `<div style="font-size:10px;color:var(--muted);margin-top:2px">${info}</div>` : ''}
+            </div>
             <div style="display:flex;gap:4px">
-              ${!esCurrent ? `<button class="mini-btn-g" style="font-size:11px" onclick="elegirGrupo(${g.id},'${g.nombre.replace(/'/g,"\\'")}')">Ir</button>` : ''}
+              ${!esCurrent ? `<button class="mini-btn-g" style="font-size:11px" onclick="elegirGrupo(${g.id})">Ir</button>` : ''}
               <button class="mini-btn-g" style="font-size:11px" onclick="iniciarRenombrarApp(${g.id})">✏</button>
               ${gruposAppData.length > 1 && !esCurrent ? `<button class="mini-btn-g" style="font-size:11px;color:var(--red)" onclick="desactivarGrupoApp(${g.id})">✗</button>` : ''}
             </div>
           </div>
           <div id="grename-${g.id}" style="display:none;margin-bottom:8px">
-            <div style="display:flex;gap:6px">
-              <input type="text" id="ri-${g.id}" class="mini-inp" value="${g.nombre}" onkeydown="if(event.key==='Enter')guardarRenombrarApp(${g.id})">
-              <button class="mini-btn" onclick="guardarRenombrarApp(${g.id})">OK</button>
-              <button class="mini-btn-g" onclick="cancelarRenombrarApp(${g.id})">✕</button>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <input type="text" id="ri-n-${g.id}" class="mini-inp" value="${g.nombre}" placeholder="Nombre del GC">
+              <div style="display:flex;gap:6px">
+                <select id="ri-d-${g.id}" class="mini-inp" style="flex:1">
+                  <option value="">Día...</option>${diasOpts}
+                </select>
+                <input type="time" id="ri-h-${g.id}" class="mini-inp" style="flex:0 0 auto;width:100px" value="${g.horario||''}">
+              </div>
+              <input type="text" id="ri-l-${g.id}" class="mini-inp" value="${g.lugar||''}" placeholder="Lugar">
+              <div style="display:flex;gap:6px">
+                <button class="mini-btn" style="flex:1" onclick="guardarRenombrarApp(${g.id})">Guardar</button>
+                <button class="mini-btn-g" onclick="cancelarRenombrarApp(${g.id})">Cancelar</button>
+              </div>
             </div>
           </div>
           <div style="margin-bottom:8px">${discsHtml}</div>
@@ -931,13 +1008,16 @@
 
   async function crearGrupoApp() {
     const nombre = document.getElementById('ngNombreApp').value.trim();
+    const dia = document.getElementById('ngDiaApp').value;
+    const horario = document.getElementById('ngHorarioApp').value;
+    const lugar = document.getElementById('ngLugarApp').value.trim();
     const msg = document.getElementById('ngMsgApp');
     if (!nombre) { msg.textContent = 'Ingresá un nombre'; msg.className = 'modal-msg err'; return; }
     try {
       const res = await fetch(`${API_URL}/grupos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lider_id: lider.id, nombre })
+        body: JSON.stringify({ lider_id: lider.id, nombre, dia, horario, lugar })
       });
       if (res.ok) {
         gruposAppModificados = true;
@@ -952,38 +1032,40 @@
   }
 
   function iniciarRenombrarApp(grupoId) {
-    document.getElementById(`gname-${grupoId}`).style.display = 'none';
+    document.getElementById(`gname-${grupoId}`).parentElement.querySelector('div[style*="margin-top"]')?.style && null;
     document.getElementById(`grename-${grupoId}`).style.display = 'block';
-    document.getElementById(`ri-${grupoId}`).focus();
+    document.getElementById(`ri-n-${grupoId}`).focus();
   }
 
   function cancelarRenombrarApp(grupoId) {
-    document.getElementById(`gname-${grupoId}`).style.display = '';
     document.getElementById(`grename-${grupoId}`).style.display = 'none';
   }
 
   async function guardarRenombrarApp(grupoId) {
-    const nombre = document.getElementById(`ri-${grupoId}`).value.trim();
+    const nombre = document.getElementById(`ri-n-${grupoId}`).value.trim();
+    const dia = document.getElementById(`ri-d-${grupoId}`).value;
+    const horario = document.getElementById(`ri-h-${grupoId}`).value;
+    const lugar = document.getElementById(`ri-l-${grupoId}`).value.trim();
     if (!nombre) return;
     try {
       const res = await fetch(`${API_URL}/grupos/${grupoId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lider_id: lider.id, nombre })
+        body: JSON.stringify({ lider_id: lider.id, nombre, dia, horario, lugar })
       });
       if (res.ok) {
         gruposAppModificados = true;
         const g = gruposAppData.find(g => g.id === grupoId);
-        if (g) g.nombre = nombre;
+        if (g) { g.nombre = nombre; g.dia = dia; g.horario = horario; g.lugar = lugar; }
         if (grupo && grupo.id === grupoId) {
-          grupo.nombre = nombre;
+          Object.assign(grupo, { nombre, dia, horario, lugar });
           sessionStorage.setItem('grupo', JSON.stringify(grupo));
         }
-        document.getElementById(`gname-${grupoId}`).textContent = nombre + (grupo?.id === grupoId ? ' ✓' : '');
         cancelarRenombrarApp(grupoId);
+        renderGruposApp();
         render();
       }
-    } catch (err) { toast('Error al renombrar', 'err'); }
+    } catch (err) { toast('Error al guardar GC', 'err'); }
   }
 
   async function desactivarGrupoApp(grupoId) {
@@ -1043,6 +1125,136 @@
       if (res.ok) { gruposAppModificados = true; loadGruposApp(); }
       else { selectEl.value = ''; toast('Error al mover', 'err'); }
     } catch (err) { selectEl.value = ''; toast('Error de conexión', 'err'); }
+  }
+
+  // ==================== ALERTA DÍA ====================
+
+  function checkDiaAlert() {
+    const DIAS_NUM = { Lunes:1, Martes:2, 'Miércoles':3, Jueves:4, Viernes:5, Sábado:6, Domingo:0 };
+    const DIAS_NOMBRE = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    const alerta = document.getElementById('diaAlert');
+    if (!grupo?.dia) { alerta.style.display = 'none'; return; }
+    const [y, m, d] = selectedDate.split('-').map(Number);
+    const diaSel = new Date(y, m - 1, d).getDay();
+    const diaGC = DIAS_NUM[grupo.dia];
+    if (diaGC === undefined || diaSel === diaGC) { alerta.style.display = 'none'; return; }
+    document.getElementById('diaAlertText').textContent =
+      `⚠ Hoy es ${DIAS_NOMBRE[diaSel]} — tu GC es los ${grupo.dia}. ¿Querés registrar igual?`;
+    alerta.style.display = 'block';
+  }
+
+  // ==================== ENTREVISTAS ====================
+
+  let entrevistaDiscId = null;
+
+  function openEntrevistaModal(discId, nombre) {
+    entrevistaDiscId = discId;
+    document.getElementById('entrevistaNombre').textContent = nombre;
+    document.getElementById('nuevaEntrevistaForm').style.display = 'none';
+    document.getElementById('btnNuevaEntrevista').style.display = 'inline-block';
+    document.getElementById('efFecha').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('efHorario').value = '';
+    document.getElementById('efLugar').value = '';
+    document.getElementById('efTemas').value = '';
+    document.getElementById('efMsg').textContent = '';
+    document.getElementById('efMsg').className = 'modal-msg';
+    document.getElementById('modalEntrevista').classList.add('open');
+    loadEntrevistas();
+  }
+
+  function closeEntrevistaModal() {
+    document.getElementById('modalEntrevista').classList.remove('open');
+    entrevistaDiscId = null;
+  }
+
+  async function loadEntrevistas() {
+    const container = document.getElementById('entrevistaList');
+    container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted)">Cargando...</div>';
+    try {
+      const res = await fetch(`${API_URL}/entrevistas/discipulo/${entrevistaDiscId}`);
+      const data = await res.json();
+      renderEntrevistas(data.entrevistas || []);
+    } catch (err) {
+      container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--red);font-size:13px">Error al cargar</div>';
+    }
+  }
+
+  function fmtFechaCorta(iso) {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
+  function renderEntrevistas(entrevistas) {
+    const container = document.getElementById('entrevistaList');
+    if (!entrevistas.length) {
+      container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">Sin entrevistas registradas</div>';
+      return;
+    }
+    container.innerHTML = entrevistas.map(e => {
+      const meta = [e.horario, e.lugar].filter(Boolean).join(' · ');
+      return `
+        <div class="entrevista-card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div class="entrevista-fecha">${fmtFechaCorta(e.fecha)}</div>
+              ${meta ? `<div class="entrevista-meta">${meta}</div>` : ''}
+            </div>
+            <button class="entrevista-btn" title="Eliminar" onclick="eliminarEntrevista(${e.id})">✕</button>
+          </div>
+          ${e.temas ? `<div class="entrevista-temas">${e.temas.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  function toggleNuevaEntrevistaForm() {
+    const f = document.getElementById('nuevaEntrevistaForm');
+    const visible = f.style.display !== 'none';
+    f.style.display = visible ? 'none' : 'block';
+    document.getElementById('btnNuevaEntrevista').style.display = visible ? 'inline-block' : 'none';
+    if (!visible) setTimeout(() => document.getElementById('efTemas').focus(), 50);
+  }
+
+  async function crearEntrevista() {
+    const fecha   = document.getElementById('efFecha').value;
+    const horario = document.getElementById('efHorario').value;
+    const lugar   = document.getElementById('efLugar').value.trim();
+    const temas   = document.getElementById('efTemas').value.trim();
+    const msg     = document.getElementById('efMsg');
+    if (!fecha) { msg.textContent = 'Ingresá la fecha'; msg.className = 'modal-msg err'; return; }
+    if (!temas) { msg.textContent = 'Ingresá los temas tratados'; msg.className = 'modal-msg err'; return; }
+    try {
+      const res = await fetch(`${API_URL}/entrevistas`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ discipulo_id: entrevistaDiscId, grupo_id: grupo.id, lider_id: lider.id, fecha, horario, lugar, temas })
+      });
+      if (res.ok) {
+        document.getElementById('nuevaEntrevistaForm').style.display = 'none';
+        document.getElementById('btnNuevaEntrevista').style.display = 'inline-block';
+        document.getElementById('efFecha').value = new Date().toISOString().slice(0, 10);
+        document.getElementById('efHorario').value = '';
+        document.getElementById('efLugar').value = '';
+        document.getElementById('efTemas').value = '';
+        msg.textContent = '';
+        loadEntrevistas();
+      } else {
+        const d = await res.json();
+        msg.textContent = d.error || 'Error'; msg.className = 'modal-msg err';
+      }
+    } catch (err) { msg.textContent = 'Error de conexión'; msg.className = 'modal-msg err'; }
+  }
+
+  async function eliminarEntrevista(id) {
+    if (!confirm('¿Eliminar esta entrevista?')) return;
+    try {
+      await fetch(`${API_URL}/entrevistas/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lider_id: lider.id })
+      });
+      loadEntrevistas();
+    } catch (err) { toast('Error al eliminar', 'err'); }
   }
 
   loadDiscipulos();
