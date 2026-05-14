@@ -282,9 +282,9 @@
         loginMsg.classList.remove('success');
         loginMsg.classList.add('error');
       } else {
-        // Guardar datos del líder y discípulos en sessionStorage
         sessionStorage.setItem('lider', JSON.stringify(data.lider));
-        sessionStorage.setItem('discipulos', JSON.stringify(data.discipulos));
+        sessionStorage.setItem('grupos', JSON.stringify(data.grupos || []));
+        sessionStorage.removeItem('grupo');
         
         loginMsg.textContent = '✓ Ingreso exitoso, redirigiendo...';
         loginMsg.classList.remove('error');

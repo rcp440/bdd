@@ -118,6 +118,14 @@
     .modal-msg.err { display: block; background: var(--red-bg); color: var(--red); }
     .edit-disc-btn { border: 1px solid var(--purple-bg); border-radius: var(--radius-sm); width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; background: var(--purple-bg); color: var(--purple); flex-shrink: 0; }
     .lider-name-btn { background: none; border: none; cursor: pointer; font-size: inherit; font-family: inherit; color: var(--purple); font-weight: 600; padding: 0; text-decoration: underline dotted; }
+
+    /* SELECTOR DE GRUPO */
+    .grupo-selector { position: fixed; inset: 0; background: var(--bg); z-index: 500; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 20px; }
+    .grupo-selector h2 { font-size: 22px; font-weight: 600; margin-bottom: 6px; text-align: center; }
+    .grupo-selector p { font-size: 13px; color: var(--muted); margin-bottom: 28px; text-align: center; }
+    .grupo-list { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 10px; }
+    .grupo-btn { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; font-size: 15px; font-weight: 600; font-family: 'DM Sans', sans-serif; color: var(--text); cursor: pointer; text-align: left; transition: border-color 0.15s, background 0.15s; }
+    .grupo-btn:hover { border-color: var(--purple); background: var(--purple-bg); color: var(--purple); }
   </style>
 </head>
 <body>
@@ -160,6 +168,12 @@
 
 <div class="add-section">
   <button class="save-btn" id="saveBtn" onclick="guardar()"><span class="icon">💾</span> Guardar asistencia</button>
+</div>
+
+<div id="grupoSelector" class="grupo-selector" style="display:none">
+  <h2 id="gsLiderNombre"></h2>
+  <p>Seleccioná el grupo con el que vas a trabajar hoy</p>
+  <div class="grupo-list" id="gsGrupos"></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -241,7 +255,8 @@
 <script>
   const API_URL = 'https://resist-turn-condition-patterns.trycloudflare.com/api';
   let lider = JSON.parse(sessionStorage.getItem('lider'));
-  let discipulos = JSON.parse(sessionStorage.getItem('discipulos')) || [];
+  let grupo = JSON.parse(sessionStorage.getItem('grupo'));
+  let grupos = JSON.parse(sessionStorage.getItem('grupos')) || [];
   let people = [];
   let selectedDate = new Date().toISOString().slice(0, 10);
 
@@ -256,6 +271,32 @@
     nav.innerHTML = '<a href="stats.html" class="nav-btn">Estadísticas</a><a href="admin.html" class="nav-btn">Admin</a>';
   }
 
+  function showGrupoSelector() {
+    document.getElementById('gsLiderNombre').textContent = lider.nombre;
+    const lista = document.getElementById('gsGrupos');
+    lista.innerHTML = grupos.map(g =>
+      `<button class="grupo-btn" onclick="elegirGrupo(${g.id}, ${JSON.stringify(g.nombre).replace(/"/g, '&quot;')})">${g.nombre}</button>`
+    ).join('');
+    document.getElementById('grupoSelector').style.display = 'flex';
+  }
+
+  function elegirGrupo(id, nombre) {
+    grupo = { id, nombre };
+    sessionStorage.setItem('grupo', JSON.stringify(grupo));
+    document.getElementById('grupoSelector').style.display = 'none';
+    loadDiscipulos();
+  }
+
+  // Auto-seleccionar si hay un solo grupo
+  if (!grupo) {
+    if (grupos.length === 1) {
+      grupo = grupos[0];
+      sessionStorage.setItem('grupo', JSON.stringify(grupo));
+    } else if (grupos.length > 1) {
+      showGrupoSelector();
+    }
+  }
+
   function fmtFecha(iso) {
     if (!iso) return '';
     const [y, m, d] = iso.split('-');
@@ -263,8 +304,9 @@
   }
 
   async function loadReunion() {
+    if (!grupo) return;
     try {
-      const res = await fetch(`${API_URL}/reunion/${lider.id}/${selectedDate}`);
+      const res = await fetch(`${API_URL}/reunion/grupo/${grupo.id}/${selectedDate}`);
       const data = await res.json();
       document.getElementById('reunionObs').value = data.observacion || '';
     } catch (err) {
@@ -273,12 +315,13 @@
   }
 
   async function loadDiscipulos() {
+    if (!grupo) return;
     try {
-      const res = await fetch(`${API_URL}/discipulos/${lider.id}`);
+      const res = await fetch(`${API_URL}/discipulos/grupo/${grupo.id}`);
       const data = await res.json();
       people = (data.discipulos || []).map(d => ({ id: d.id, name: d.nombre, phone: d.celular || '', fnac: d.fecha_nacimiento || '', obs: '', status: 'a' }));
     } catch (err) {
-      people = (JSON.parse(sessionStorage.getItem('discipulos')) || []).map(d => ({ id: d.id, name: d.nombre, phone: d.celular || '', fnac: d.fecha_nacimiento || '', obs: '', status: 'a' }));
+      people = [];
     }
     await loadAsistencia();
   }
@@ -308,8 +351,9 @@
 
   async function loadAsistencia() {
     people.forEach(p => { p.status = 'a'; p.obs = ''; });
+    if (!grupo) { render(); return; }
     try {
-      const res = await fetch(`${API_URL}/asistencia/${lider.id}/${selectedDate}`);
+      const res = await fetch(`${API_URL}/asistencia/grupo/${grupo.id}/${selectedDate}`);
       const data = await res.json();
       if (data.registros && data.registros.length > 0) {
         data.registros.forEach(reg => {
@@ -333,7 +377,10 @@
   }
 
   function render() {
-    document.getElementById('headerInfo').innerHTML = `<button class="lider-name-btn" onclick="openPerfilModal()">${lider.nombre}</button> • ${people.length} discípulos`;
+    const grupoLink = grupos.length > 1
+      ? ` · <button class="lider-name-btn" onclick="showGrupoSelector()" title="Cambiar grupo">${grupo?.nombre || ''}</button>`
+      : (grupo ? ` · ${grupo.nombre}` : '');
+    document.getElementById('headerInfo').innerHTML = `<button class="lider-name-btn" onclick="openPerfilModal()">${lider.nombre}</button>${grupoLink} • ${people.length} discípulos`;
     const list = document.getElementById('list');
     if (!people.length) {
       list.innerHTML = '<div class="empty">📋 No hay discípulos agregados</div>';
@@ -397,7 +444,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            lider_id: lider.id,
+            grupo_id: grupo.id,
             nombre: person.name,
             celular: person.phone,
             fecha_nacimiento: person.fnac || null
@@ -424,7 +471,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          lider_id: lider.id,
+          grupo_id: grupo.id,
           fecha: selectedDate,
           registros
         })
@@ -435,7 +482,7 @@
         await fetch(`${API_URL}/reunion`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ lider_id: lider.id, fecha: selectedDate, observacion: obsReunion })
+          body: JSON.stringify({ grupo_id: grupo.id, fecha: selectedDate, observacion: obsReunion })
         });
         toast('✓ Asistencia guardada en la BD', 'ok');
       } else {
