@@ -126,6 +126,19 @@
     .grupo-list { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 10px; }
     .grupo-btn { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; font-size: 15px; font-weight: 600; font-family: 'DM Sans', sans-serif; color: var(--text); cursor: pointer; text-align: left; transition: border-color 0.15s, background 0.15s; }
     .grupo-btn:hover { border-color: var(--purple); background: var(--purple-bg); color: var(--purple); }
+    /* GESTIÓN DE GRUPOS (modal) */
+    .gcard { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 8px; }
+    .gcard-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .gcard-nombre { font-size: 13px; font-weight: 600; color: var(--purple); }
+    .gcard-nombre.activo { text-decoration: underline dotted; }
+    .disc-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+    .disc-row:last-child { border-bottom: none; }
+    .disc-name { font-size: 12px; flex: 1; }
+    .mover-sel { font-size: 11px; padding: 3px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--card); color: var(--muted); cursor: pointer; font-family: 'DM Sans', sans-serif; max-width: 110px; }
+    .mini-inp { padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; background: var(--bg); outline: none; font-family: 'DM Sans', sans-serif; width: 100%; }
+    .mini-inp:focus { border-color: var(--purple); }
+    .mini-btn { background: var(--purple); color: #fff; border: none; border-radius: var(--radius-sm); padding: 7px 12px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
+    .mini-btn-g { background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 10px; font-size: 12px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -157,6 +170,7 @@
   <div class="list-header">
     <span>Discípulos</span>
     <div style="display:flex;gap:10px;align-items:center;">
+      <button class="nav-btn" onclick="openGruposModal()">Grupos</button>
       <button class="nav-btn" onclick="openAddDiscModal()">+ Agregar</button>
       <button onclick="descargarCSV()" title="Descargar CSV" style="font-size:12px;color:var(--green);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;">⬇ CSV</button>
       <button onclick="imprimirPDF()" title="Informe PDF" style="font-size:12px;color:var(--purple);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;">⬇ PDF</button>
@@ -170,6 +184,28 @@
   <h2 id="gsLiderNombre"></h2>
   <p>Seleccioná el grupo con el que vas a trabajar hoy</p>
   <div class="grupo-list" id="gsGrupos"></div>
+</div>
+
+<div class="modal-overlay" id="modalGruposLider" onclick="if(event.target===this)closeGruposModal()">
+  <div class="modal" style="max-width:420px;max-height:85vh;overflow-y:auto">
+    <div class="modal-header">
+      <span class="modal-title">Mis grupos</span>
+      <button class="modal-close" onclick="closeGruposModal()">×</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Células</span>
+      <button class="mini-btn" onclick="toggleNuevoGrupoFormApp()">+ Nueva célula</button>
+    </div>
+    <div id="ngFormApp" style="display:none;margin-bottom:12px">
+      <div style="display:flex;gap:6px">
+        <input type="text" id="ngNombreApp" class="mini-inp" placeholder="Nombre de la célula" onkeydown="if(event.key==='Enter')crearGrupoApp()">
+        <button class="mini-btn" onclick="crearGrupoApp()">Crear</button>
+        <button class="mini-btn-g" onclick="toggleNuevoGrupoFormApp()">✕</button>
+      </div>
+      <div id="ngMsgApp" class="modal-msg" style="margin-top:6px"></div>
+    </div>
+    <div id="gruposContainerApp"><div style="text-align:center;padding:16px;color:var(--muted)">Cargando...</div></div>
+  </div>
 </div>
 
 <div class="add-section">
@@ -781,6 +817,232 @@
     closeEditDiscModal();
     render();
     toast('Discípulo dado de baja', 'ok');
+  }
+
+  // ==================== GESTIÓN DE GRUPOS ====================
+
+  let gruposAppData = [];
+  let gruposAppModificados = false;
+
+  function openGruposModal() {
+    gruposAppModificados = false;
+    document.getElementById('ngFormApp').style.display = 'none';
+    document.getElementById('ngNombreApp').value = '';
+    document.getElementById('ngMsgApp').className = 'modal-msg';
+    document.getElementById('modalGruposLider').classList.add('open');
+    loadGruposApp();
+  }
+
+  function closeGruposModal() {
+    document.getElementById('modalGruposLider').classList.remove('open');
+    if (gruposAppModificados) {
+      fetch(`${API_URL}/grupos/${lider.id}`)
+        .then(r => r.json())
+        .then(d => {
+          grupos = d.grupos || [];
+          sessionStorage.setItem('grupos', JSON.stringify(grupos));
+          if (grupo && !grupos.find(g => g.id === grupo.id)) {
+            sessionStorage.removeItem('grupo');
+            grupo = null;
+          }
+        })
+        .finally(() => loadDiscipulos());
+    }
+  }
+
+  async function loadGruposApp() {
+    const container = document.getElementById('gruposContainerApp');
+    container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted)">Cargando...</div>';
+    try {
+      const res = await fetch(`${API_URL}/grupos/${lider.id}`);
+      const data = await res.json();
+      gruposAppData = data.grupos || [];
+      if (!gruposAppData.length) {
+        container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">Sin grupos. Creá la primera célula.</div>';
+        return;
+      }
+      for (const g of gruposAppData) {
+        const r = await fetch(`${API_URL}/discipulos/grupo/${g.id}`);
+        const d = await r.json();
+        g.discipulos = d.discipulos || [];
+      }
+      renderGruposApp();
+    } catch (err) {
+      container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--red);font-size:13px">Error al cargar</div>';
+    }
+  }
+
+  function renderGruposApp() {
+    const container = document.getElementById('gruposContainerApp');
+    container.innerHTML = gruposAppData.map(g => {
+      const esCurrent = grupo && grupo.id === g.id;
+      const otrosGrupos = gruposAppData.filter(og => og.id !== g.id);
+      const discsHtml = g.discipulos.length
+        ? g.discipulos.map(d => `
+            <div class="disc-row">
+              <span class="disc-name">${d.nombre}</span>
+              ${otrosGrupos.length ? `
+                <select class="mover-sel" onchange="moverDiscipuloApp(${d.id},this.value,${g.id},this)">
+                  <option value="">Mover a...</option>
+                  ${otrosGrupos.map(og => `<option value="${og.id}">${og.nombre}</option>`).join('')}
+                </select>` : ''}
+            </div>`).join('')
+        : '<div style="color:var(--muted);font-size:12px;padding:4px 0">Sin discípulos</div>';
+
+      return `
+        <div class="gcard">
+          <div class="gcard-header">
+            <span class="gcard-nombre${esCurrent ? ' activo' : ''}" id="gname-${g.id}">${g.nombre}${esCurrent ? ' ✓' : ''}</span>
+            <div style="display:flex;gap:4px">
+              ${!esCurrent ? `<button class="mini-btn-g" style="font-size:11px" onclick="elegirGrupo(${g.id},'${g.nombre.replace(/'/g,"\\'")}')">Ir</button>` : ''}
+              <button class="mini-btn-g" style="font-size:11px" onclick="iniciarRenombrarApp(${g.id})">✏</button>
+              ${gruposAppData.length > 1 && !esCurrent ? `<button class="mini-btn-g" style="font-size:11px;color:var(--red)" onclick="desactivarGrupoApp(${g.id})">✗</button>` : ''}
+            </div>
+          </div>
+          <div id="grename-${g.id}" style="display:none;margin-bottom:8px">
+            <div style="display:flex;gap:6px">
+              <input type="text" id="ri-${g.id}" class="mini-inp" value="${g.nombre}" onkeydown="if(event.key==='Enter')guardarRenombrarApp(${g.id})">
+              <button class="mini-btn" onclick="guardarRenombrarApp(${g.id})">OK</button>
+              <button class="mini-btn-g" onclick="cancelarRenombrarApp(${g.id})">✕</button>
+            </div>
+          </div>
+          <div style="margin-bottom:8px">${discsHtml}</div>
+          <div id="addform-${g.id}" style="display:none;margin-bottom:6px">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <input type="text" id="adname-${g.id}" class="mini-inp" placeholder="Nombre y apellido" onkeydown="if(event.key==='Enter')document.getElementById('adcel-${g.id}').focus()">
+              <input type="tel" id="adcel-${g.id}" class="mini-inp" placeholder="Celular (opcional)" onkeydown="if(event.key==='Enter')agregarDiscipuloApp(${g.id})">
+              <div style="display:flex;gap:6px">
+                <button class="mini-btn" style="flex:1" onclick="agregarDiscipuloApp(${g.id})">+ Agregar</button>
+                <button class="mini-btn-g" onclick="document.getElementById('addform-${g.id}').style.display='none'">Cancelar</button>
+              </div>
+              <div id="addmsg-${g.id}" class="modal-msg" style="margin-top:0"></div>
+            </div>
+          </div>
+          <button class="mini-btn-g" style="width:100%;text-align:center;font-size:12px;color:var(--purple);border-color:var(--purple-bg);background:var(--purple-bg)" onclick="toggleAddDiscFormApp(${g.id})">+ Agregar discípulo</button>
+        </div>`;
+    }).join('');
+  }
+
+  function toggleNuevoGrupoFormApp() {
+    const f = document.getElementById('ngFormApp');
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    if (f.style.display === 'block') setTimeout(() => document.getElementById('ngNombreApp').focus(), 50);
+  }
+
+  async function crearGrupoApp() {
+    const nombre = document.getElementById('ngNombreApp').value.trim();
+    const msg = document.getElementById('ngMsgApp');
+    if (!nombre) { msg.textContent = 'Ingresá un nombre'; msg.className = 'modal-msg err'; return; }
+    try {
+      const res = await fetch(`${API_URL}/grupos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lider_id: lider.id, nombre })
+      });
+      if (res.ok) {
+        gruposAppModificados = true;
+        document.getElementById('ngNombreApp').value = '';
+        document.getElementById('ngFormApp').style.display = 'none';
+        loadGruposApp();
+      } else {
+        const d = await res.json();
+        msg.textContent = d.error || 'Error'; msg.className = 'modal-msg err';
+      }
+    } catch (err) { msg.textContent = 'Error de conexión'; msg.className = 'modal-msg err'; }
+  }
+
+  function iniciarRenombrarApp(grupoId) {
+    document.getElementById(`gname-${grupoId}`).style.display = 'none';
+    document.getElementById(`grename-${grupoId}`).style.display = 'block';
+    document.getElementById(`ri-${grupoId}`).focus();
+  }
+
+  function cancelarRenombrarApp(grupoId) {
+    document.getElementById(`gname-${grupoId}`).style.display = '';
+    document.getElementById(`grename-${grupoId}`).style.display = 'none';
+  }
+
+  async function guardarRenombrarApp(grupoId) {
+    const nombre = document.getElementById(`ri-${grupoId}`).value.trim();
+    if (!nombre) return;
+    try {
+      const res = await fetch(`${API_URL}/grupos/${grupoId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lider_id: lider.id, nombre })
+      });
+      if (res.ok) {
+        gruposAppModificados = true;
+        const g = gruposAppData.find(g => g.id === grupoId);
+        if (g) g.nombre = nombre;
+        if (grupo && grupo.id === grupoId) {
+          grupo.nombre = nombre;
+          sessionStorage.setItem('grupo', JSON.stringify(grupo));
+        }
+        document.getElementById(`gname-${grupoId}`).textContent = nombre + (grupo?.id === grupoId ? ' ✓' : '');
+        cancelarRenombrarApp(grupoId);
+        render();
+      }
+    } catch (err) { toast('Error al renombrar', 'err'); }
+  }
+
+  async function desactivarGrupoApp(grupoId) {
+    const g = gruposAppData.find(g => g.id === grupoId);
+    if (!confirm(`¿Desactivar "${g?.nombre}"?`)) return;
+    try {
+      await fetch(`${API_URL}/grupos/${grupoId}/activo`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lider_id: lider.id, activo: false })
+      });
+      gruposAppModificados = true;
+      loadGruposApp();
+    } catch (err) { toast('Error al desactivar', 'err'); }
+  }
+
+  function toggleAddDiscFormApp(grupoId) {
+    const f = document.getElementById(`addform-${grupoId}`);
+    f.style.display = f.style.display === 'none' ? 'block' : 'none';
+    if (f.style.display === 'block') setTimeout(() => document.getElementById(`adname-${grupoId}`).focus(), 50);
+  }
+
+  async function agregarDiscipuloApp(grupoId) {
+    const nombre = document.getElementById(`adname-${grupoId}`).value.trim();
+    const celular = document.getElementById(`adcel-${grupoId}`).value.trim();
+    const msg = document.getElementById(`addmsg-${grupoId}`);
+    if (!nombre) { msg.textContent = 'El nombre es requerido'; msg.className = 'modal-msg err'; return; }
+    try {
+      const res = await fetch(`${API_URL}/discipulos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ grupo_id: grupoId, nombre, celular })
+      });
+      const data = await res.json();
+      if (!res.ok) { msg.textContent = data.error || 'Error'; msg.className = 'modal-msg err'; }
+      else {
+        gruposAppModificados = true;
+        msg.textContent = '✓ Discípulo agregado'; msg.className = 'modal-msg ok';
+        document.getElementById(`adname-${grupoId}`).value = '';
+        document.getElementById(`adcel-${grupoId}`).value = '';
+        loadGruposApp();
+      }
+    } catch (err) { msg.textContent = 'Error de conexión'; msg.className = 'modal-msg err'; }
+  }
+
+  async function moverDiscipuloApp(discId, nuevoGrupoId, grupoActualId, selectEl) {
+    if (!nuevoGrupoId) return;
+    const g = gruposAppData.find(g => g.id === grupoActualId);
+    const disc = g?.discipulos.find(d => d.id === discId);
+    if (!disc) return;
+    try {
+      const res = await fetch(`${API_URL}/discipulos/${discId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lider_id: lider.id, nombre: disc.nombre, celular: disc.celular || '', grupo_id: parseInt(nuevoGrupoId) })
+      });
+      if (res.ok) { gruposAppModificados = true; loadGruposApp(); }
+      else { selectEl.value = ''; toast('Error al mover', 'err'); }
+    } catch (err) { selectEl.value = ''; toast('Error de conexión', 'err'); }
   }
 
   loadDiscipulos();
