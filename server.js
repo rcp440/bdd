@@ -92,6 +92,7 @@ app.get('/api/superadmin/instituciones', async (req, res) => {
 // Superadmin: crear institución
 app.post('/api/superadmin/instituciones', async (req, res) => {
   if (!checkSuperadmin(req, res)) return;
+  const tx = new sql.Transaction(pool);
   try {
     const { slug, nombre, admin_nombre, admin_usuario, admin_contrasena } = req.body;
     if (!slug || !nombre) return res.status(400).json({ error: 'slug y nombre requeridos' });
@@ -99,28 +100,36 @@ app.post('/api/superadmin/instituciones', async (req, res) => {
       return res.status(400).json({ error: 'Datos del admin requeridos (nombre, usuario, contraseña)' });
     }
     const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9-]/g, '-');
-    const r = await pool.request()
-      .input('slug', sql.NVarChar(50), cleanSlug)
+    const hash = await bcrypt.hash(admin_contrasena, 10);
+
+    await tx.begin();
+
+    const r = await new sql.Request(tx)
+      .input('slug',   sql.NVarChar(50),  cleanSlug)
       .input('nombre', sql.NVarChar(200), nombre)
       .query(`INSERT INTO Instituciones (slug, nombre)
               OUTPUT INSERTED.id, INSERTED.slug, INSERTED.nombre
               VALUES (@slug, @nombre)`);
     const inst = r.recordset[0];
-    const hash = await bcrypt.hash(admin_contrasena, 10);
-    await pool.request()
-      .input('nombre',     sql.VarChar, admin_nombre)
-      .input('usuario',    sql.VarChar, admin_usuario)
-      .input('email',      sql.VarChar, `${admin_usuario}@${cleanSlug}.local`)
-      .input('contrasena', sql.VarChar, hash)
+
+    await new sql.Request(tx)
+      .input('nombre',     sql.VarChar(200), admin_nombre)
+      .input('usuario',    sql.VarChar(100), admin_usuario)
+      .input('email',      sql.VarChar(200), `${admin_usuario}@${cleanSlug}.local`)
+      .input('contrasena', sql.VarChar(200), hash)
       .input('inst_id',    sql.Int, inst.id)
-      .query(`INSERT INTO Lideres (nombre, usuario, email, contrasena, rol, institucion_id)
-              VALUES (@nombre, @usuario, @email, @contrasena, 'admin', @inst_id)`);
+      .query(`INSERT INTO Lideres (nombre, usuario, email, contrasena, rol, institucion_id, fecha_registro)
+              VALUES (@nombre, @usuario, @email, @contrasena, 'admin', @inst_id, GETDATE())`);
+
+    await tx.commit();
     res.status(201).json({ ok: true, institucion: inst });
   } catch (err) {
+    try { await tx.rollback(); } catch {}
+    console.error('Error creando institución:', err);
     if (err.originalError?.info?.message?.includes('UNIQUE')) {
-      return res.status(400).json({ error: 'El slug o usuario ya existe' });
+      return res.status(400).json({ error: 'El slug o nombre de usuario ya existe' });
     }
-    res.status(500).json({ error: 'Error en servidor' });
+    res.status(500).json({ error: err.message || 'Error en servidor' });
   }
 });
 
