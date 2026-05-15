@@ -87,13 +87,30 @@
       <div class="card">
         <div id="createMsg" class="msg"></div>
         <div class="form-group">
-          <label>Nombre</label>
+          <label>Nombre de la institución</label>
           <input type="text" id="nuevoNombre" placeholder="Iglesia Centro">
         </div>
         <div class="form-group">
           <label>Slug (URL)</label>
           <input type="text" id="nuevoSlug" placeholder="iglesia-centro">
-          <div class="form-hint">Solo letras minúsculas, números y guiones. Ejemplo: iglesia-centro</div>
+          <div class="form-hint">Solo letras minúsculas, números y guiones.</div>
+        </div>
+        <div style="border-top:1px solid var(--border);margin:12px 0 12px;padding-top:12px">
+          <div class="section-title" style="margin-bottom:8px">Primer administrador</div>
+          <div class="form-group">
+            <label>Nombre completo</label>
+            <input type="text" id="adminNombre" placeholder="Juan Pérez">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="form-group">
+              <label>Usuario</label>
+              <input type="text" id="adminUsuario" placeholder="juanp" autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label>Contraseña</label>
+              <input type="password" id="adminContrasena" placeholder="••••••" autocomplete="new-password">
+            </div>
+          </div>
         </div>
         <button class="btn-primary" onclick="crearInstitucion()">Crear institución</button>
       </div>
@@ -194,21 +211,29 @@
   }
 
   async function crearInstitucion() {
-    const nombre = document.getElementById('nuevoNombre').value.trim();
-    const slug   = document.getElementById('nuevoSlug').value.trim();
-    const msg    = document.getElementById('createMsg');
+    const nombre           = document.getElementById('nuevoNombre').value.trim();
+    const slug             = document.getElementById('nuevoSlug').value.trim();
+    const admin_nombre     = document.getElementById('adminNombre').value.trim();
+    const admin_usuario    = document.getElementById('adminUsuario').value.trim();
+    const admin_contrasena = document.getElementById('adminContrasena').value;
+    const msg = document.getElementById('createMsg');
     clearMsg(msg);
     if (!nombre || !slug) { showMsg(msg, 'Nombre y slug requeridos', 'error'); return; }
+    if (!admin_nombre || !admin_usuario || !admin_contrasena) {
+      showMsg(msg, 'Completá los datos del administrador', 'error'); return;
+    }
     try {
       const res = await fetch(`${API_URL}/superadmin/instituciones`, {
         method: 'POST', headers: headers(),
-        body: JSON.stringify({ nombre, slug })
+        body: JSON.stringify({ nombre, slug, admin_nombre, admin_usuario, admin_contrasena })
       });
       const data = await res.json();
       if (!res.ok) { showMsg(msg, data.error || 'Error', 'error'); return; }
-      showMsg(msg, `Institución creada. URL: ?inst=${data.institucion.slug}`, 'success');
-      document.getElementById('nuevoNombre').value = '';
-      document.getElementById('nuevoSlug').value = '';
+      showMsg(msg, `Institución creada. URL de acceso: ?inst=${data.institucion.slug}`, 'success');
+      ['nuevoNombre','nuevoSlug','adminNombre','adminUsuario','adminContrasena'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('nuevoSlug').dataset.manual = '';
       loadInstituciones();
     } catch { showMsg(msg, 'Error de conexión', 'error'); }
   }

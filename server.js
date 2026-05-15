@@ -93,18 +93,32 @@ app.get('/api/superadmin/instituciones', async (req, res) => {
 app.post('/api/superadmin/instituciones', async (req, res) => {
   if (!checkSuperadmin(req, res)) return;
   try {
-    const { slug, nombre } = req.body;
+    const { slug, nombre, admin_nombre, admin_usuario, admin_contrasena } = req.body;
     if (!slug || !nombre) return res.status(400).json({ error: 'slug y nombre requeridos' });
+    if (!admin_nombre || !admin_usuario || !admin_contrasena) {
+      return res.status(400).json({ error: 'Datos del admin requeridos (nombre, usuario, contraseña)' });
+    }
+    const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9-]/g, '-');
     const r = await pool.request()
-      .input('slug', sql.NVarChar(50), slug.toLowerCase().replace(/[^a-z0-9-]/g, '-'))
+      .input('slug', sql.NVarChar(50), cleanSlug)
       .input('nombre', sql.NVarChar(200), nombre)
       .query(`INSERT INTO Instituciones (slug, nombre)
               OUTPUT INSERTED.id, INSERTED.slug, INSERTED.nombre
               VALUES (@slug, @nombre)`);
-    res.status(201).json({ ok: true, institucion: r.recordset[0] });
+    const inst = r.recordset[0];
+    const hash = await bcrypt.hash(admin_contrasena, 10);
+    await pool.request()
+      .input('nombre',     sql.VarChar, admin_nombre)
+      .input('usuario',    sql.VarChar, admin_usuario)
+      .input('email',      sql.VarChar, `${admin_usuario}@${cleanSlug}.local`)
+      .input('contrasena', sql.VarChar, hash)
+      .input('inst_id',    sql.Int, inst.id)
+      .query(`INSERT INTO Lideres (nombre, usuario, email, contrasena, rol, institucion_id)
+              VALUES (@nombre, @usuario, @email, @contrasena, 'admin', @inst_id)`);
+    res.status(201).json({ ok: true, institucion: inst });
   } catch (err) {
     if (err.originalError?.info?.message?.includes('UNIQUE')) {
-      return res.status(400).json({ error: 'El slug ya existe' });
+      return res.status(400).json({ error: 'El slug o usuario ya existe' });
     }
     res.status(500).json({ error: 'Error en servidor' });
   }
