@@ -12,18 +12,19 @@ $envOrigen = ""   # <-- Si quiere que el script copie el .env automáticamente,
 Write-Host ""
 Write-Host "=== DEPLOY bdd ===" -ForegroundColor Cyan
 
-# 1. Detener proceso node anterior si está corriendo
-$nodePid = (Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue).OwningProcess | Select-Object -First 1
-if ($nodePid) {
-    Write-Host "Deteniendo servidor Node anterior (PID $nodePid)..." -ForegroundColor Yellow
-    Stop-Process -Id $nodePid -Force -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 1
-}
+# 1. Detener todos los procesos node
+Write-Host "Deteniendo procesos Node..." -ForegroundColor Yellow
+Get-Process -Name "node" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Start-Sleep -Seconds 2
 
 # 2. Borrar carpeta anterior
 if (Test-Path $destino) {
     Write-Host "Borrando $destino..." -ForegroundColor Yellow
-    Remove-Item -Path $destino -Recurse -Force
+    Remove-Item -Path $destino -Recurse -Force -ErrorAction Stop
+    if (Test-Path $destino) {
+        Write-Host "ERROR: No se pudo borrar $destino. Cerrá procesos que usen esa carpeta." -ForegroundColor Red
+        exit 1
+    }
 }
 
 # 3. Descargar ZIP desde GitHub
