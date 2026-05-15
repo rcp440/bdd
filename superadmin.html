@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Superadmin · Instituciones</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F5F4F0; --card: #FFFFFF; --text: #1A1A18; --muted: #8A8A80;
+      --border: #E2E1DC; --purple: #5B4FD4; --purple-bg: #EFEDFC;
+      --green: #1D9E75; --green-bg: #EBF8F3; --red: #D04030; --red-bg: #FCECEA;
+      --radius: 14px; --radius-sm: 9px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); }
+    .app { max-width: 600px; margin: 0 auto; padding-bottom: 40px; }
+    .header { padding: 40px 20px 16px; border-bottom: 1px solid var(--border); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+    .header h1 { font-size: 20px; font-weight: 600; }
+    .header h1 span { color: var(--purple); }
+    .logout-btn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 6px 12px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+    .section { padding: 0 20px; margin-bottom: 20px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; }
+    .inst-row { display: flex; align-items: center; gap: 12px; }
+    .inst-info { flex: 1; }
+    .inst-nombre { font-size: 14px; font-weight: 600; }
+    .inst-slug { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: monospace; }
+    .inst-stats { font-size: 11px; color: var(--purple); margin-top: 4px; }
+    .badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px; margin-left: 6px; }
+    .badge-activo { background: var(--green-bg); color: var(--green); }
+    .badge-inactivo { background: var(--red-bg); color: var(--red); }
+    .btn-sm { font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: var(--radius-sm); border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+    .btn-edit { background: var(--purple-bg); color: var(--purple); }
+    .btn-toggle { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+    .btn-primary { background: var(--purple); color: #fff; padding: 10px 18px; border-radius: var(--radius-sm); border: none; font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; width: 100%; }
+    .btn-primary:hover { opacity: 0.9; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px; }
+    .form-group input { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; background: var(--bg); }
+    .form-group input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--purple-bg); background: #fff; }
+    .form-hint { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .msg { font-size: 13px; padding: 10px 14px; border-radius: var(--radius-sm); margin-bottom: 12px; display: none; }
+    .msg.error { background: var(--red-bg); color: var(--red); display: block; }
+    .msg.success { background: var(--green-bg); color: var(--green); display: block; }
+    .section-title { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--card); border-radius: var(--radius); padding: 24px; width: 90%; max-width: 400px; }
+    .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 4px; }
+    .btn-cancel { flex: 1; background: var(--bg); color: var(--muted); border: 1px solid var(--border); padding: 9px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+    /* LOGIN */
+    .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .login-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 36px; width: 100%; max-width: 340px; }
+    .login-card h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+    .login-card h1 span { color: var(--purple); }
+    .login-card p { font-size: 12px; color: var(--muted); margin-bottom: 24px; }
+    #app { display: none; }
+  </style>
+</head>
+<body>
+
+<!-- Login -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <h1>Super<span>admin</span></h1>
+    <p>Panel de gestión de instituciones</p>
+    <div class="form-group">
+      <label>Token de acceso</label>
+      <input type="password" id="tokenInput" placeholder="Token superadmin" autofocus>
+    </div>
+    <div id="loginMsg" class="msg"></div>
+    <button class="btn-primary" onclick="doLogin()">Ingresar</button>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+  <div class="app">
+    <div class="header">
+      <h1>Super<span>admin</span> · Instituciones</h1>
+      <button class="logout-btn" onclick="logout()">Salir</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Nueva institución</div>
+      <div class="card">
+        <div id="createMsg" class="msg"></div>
+        <div class="form-group">
+          <label>Nombre</label>
+          <input type="text" id="nuevoNombre" placeholder="Iglesia Centro">
+        </div>
+        <div class="form-group">
+          <label>Slug (URL)</label>
+          <input type="text" id="nuevoSlug" placeholder="iglesia-centro">
+          <div class="form-hint">Solo letras minúsculas, números y guiones. Ejemplo: iglesia-centro</div>
+        </div>
+        <button class="btn-primary" onclick="crearInstitucion()">Crear institución</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Instituciones</div>
+      <div id="listaInst">Cargando...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal editar -->
+<div class="modal-overlay" id="modalEdit">
+  <div class="modal">
+    <h3>Editar institución</h3>
+    <input type="hidden" id="editId">
+    <div class="form-group">
+      <label>Nombre</label>
+      <input type="text" id="editNombre">
+    </div>
+    <div class="form-group">
+      <label>Slug</label>
+      <input type="text" id="editSlug">
+    </div>
+    <div id="editMsg" class="msg"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeEdit()">Cancelar</button>
+      <button class="btn-primary" style="flex:1" onclick="guardarEdit()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API_URL = 'https://resist-turn-condition-patterns.trycloudflare.com/api';
+  let token = sessionStorage.getItem('superadmin_token') || '';
+
+  function headers() {
+    return { 'Content-Type': 'application/json', 'x-superadmin-token': token };
+  }
+
+  async function doLogin() {
+    token = document.getElementById('tokenInput').value.trim();
+    const msg = document.getElementById('loginMsg');
+    if (!token) { showMsg(msg, 'Ingresá el token', 'error'); return; }
+    try {
+      const res = await fetch(`${API_URL}/superadmin/instituciones`, { headers: headers() });
+      if (res.status === 403) { showMsg(msg, 'Token incorrecto', 'error'); return; }
+      sessionStorage.setItem('superadmin_token', token);
+      document.getElementById('loginWrap').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      loadInstituciones();
+    } catch { showMsg(msg, 'Error de conexión', 'error'); }
+  }
+
+  function logout() {
+    sessionStorage.removeItem('superadmin_token');
+    token = '';
+    document.getElementById('loginWrap').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('tokenInput').value = '';
+  }
+
+  function showMsg(el, text, type) {
+    el.textContent = text;
+    el.className = `msg ${type}`;
+  }
+  function clearMsg(el) { el.className = 'msg'; el.textContent = ''; }
+
+  async function loadInstituciones() {
+    const lista = document.getElementById('listaInst');
+    try {
+      const res = await fetch(`${API_URL}/superadmin/instituciones`, { headers: headers() });
+      const data = await res.json();
+      if (!data.instituciones?.length) {
+        lista.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:4px 0">Sin instituciones aún.</div>';
+        return;
+      }
+      lista.innerHTML = data.instituciones.map(i => `
+        <div class="card">
+          <div class="inst-row">
+            <div class="inst-info">
+              <div class="inst-nombre">
+                ${i.nombre}
+                <span class="badge ${i.activo ? 'badge-activo' : 'badge-inactivo'}">${i.activo ? 'activa' : 'inactiva'}</span>
+              </div>
+              <div class="inst-slug">?inst=${i.slug}</div>
+              <div class="inst-stats">${i.lideres} líderes · ${i.discipulos} discípulos</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+              <button class="btn-sm btn-edit" onclick="openEdit(${i.id},'${i.slug}','${i.nombre.replace(/'/g,"\\'")}')">Editar</button>
+              <button class="btn-sm btn-toggle" onclick="toggleInst(${i.id},${i.activo})">${i.activo ? 'Desactivar' : 'Activar'}</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    } catch { lista.innerHTML = '<div style="color:var(--red)">Error cargando instituciones</div>'; }
+  }
+
+  async function crearInstitucion() {
+    const nombre = document.getElementById('nuevoNombre').value.trim();
+    const slug   = document.getElementById('nuevoSlug').value.trim();
+    const msg    = document.getElementById('createMsg');
+    clearMsg(msg);
+    if (!nombre || !slug) { showMsg(msg, 'Nombre y slug requeridos', 'error'); return; }
+    try {
+      const res = await fetch(`${API_URL}/superadmin/instituciones`, {
+        method: 'POST', headers: headers(),
+        body: JSON.stringify({ nombre, slug })
+      });
+      const data = await res.json();
+      if (!res.ok) { showMsg(msg, data.error || 'Error', 'error'); return; }
+      showMsg(msg, `Institución creada. URL: ?inst=${data.institucion.slug}`, 'success');
+      document.getElementById('nuevoNombre').value = '';
+      document.getElementById('nuevoSlug').value = '';
+      loadInstituciones();
+    } catch { showMsg(msg, 'Error de conexión', 'error'); }
+  }
+
+  function openEdit(id, slug, nombre) {
+    document.getElementById('editId').value = id;
+    document.getElementById('editSlug').value = slug;
+    document.getElementById('editNombre').value = nombre;
+    clearMsg(document.getElementById('editMsg'));
+    document.getElementById('modalEdit').classList.add('open');
+  }
+
+  function closeEdit() { document.getElementById('modalEdit').classList.remove('open'); }
+
+  async function guardarEdit() {
+    const id     = document.getElementById('editId').value;
+    const slug   = document.getElementById('editSlug').value.trim();
+    const nombre = document.getElementById('editNombre').value.trim();
+    const msg    = document.getElementById('editMsg');
+    clearMsg(msg);
+    if (!slug || !nombre) { showMsg(msg, 'Nombre y slug requeridos', 'error'); return; }
+    try {
+      const res = await fetch(`${API_URL}/superadmin/instituciones/${id}`, {
+        method: 'PUT', headers: headers(),
+        body: JSON.stringify({ slug, nombre })
+      });
+      const data = await res.json();
+      if (!res.ok) { showMsg(msg, data.error || 'Error', 'error'); return; }
+      closeEdit();
+      loadInstituciones();
+    } catch { showMsg(msg, 'Error de conexión', 'error'); }
+  }
+
+  async function toggleInst(id, activo) {
+    try {
+      await fetch(`${API_URL}/superadmin/instituciones/${id}/activo`, {
+        method: 'PATCH', headers: headers(),
+        body: JSON.stringify({ activo: !activo })
+      });
+      loadInstituciones();
+    } catch {}
+  }
+
+  // Auto-login si hay token guardado
+  if (token) {
+    fetch(`${API_URL}/superadmin/instituciones`, { headers: headers() }).then(r => {
+      if (r.ok) {
+        document.getElementById('loginWrap').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        loadInstituciones();
+      } else { sessionStorage.removeItem('superadmin_token'); token = ''; }
+    }).catch(() => {});
+  }
+
+  // Auto-slug desde nombre
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('nuevoNombre').addEventListener('input', function() {
+      const slugEl = document.getElementById('nuevoSlug');
+      if (!slugEl.dataset.manual) {
+        slugEl.value = this.value.toLowerCase()
+          .normalize('NFD').replace(/[̀-ͯ]/g, '')
+          .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      }
+    });
+    document.getElementById('nuevoSlug').addEventListener('input', function() {
+      this.dataset.manual = this.value ? '1' : '';
+    });
+  });
+</script>
+</body>
+</html>

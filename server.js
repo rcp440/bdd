@@ -36,22 +36,145 @@ async function connectDB() {
   }
 }
 
+// ==================== HELPERS INSTITUCION ====================
+
+async function getLiderInfo(lider_id) {
+  if (!lider_id) return { rol: 'lider', institucion_id: null };
+  const r = await pool.request()
+    .input('id', sql.Int, parseInt(lider_id))
+    .query('SELECT rol, institucion_id FROM Lideres WHERE id = @id AND activo = 1');
+  return r.recordset[0] || { rol: 'lider', institucion_id: null };
+}
+
+function checkSuperadmin(req, res) {
+  const token = req.headers['x-superadmin-token'] || req.body?.superadmin_token || req.query?.superadmin_token;
+  if (!process.env.SUPERADMIN_TOKEN || token !== process.env.SUPERADMIN_TOKEN) {
+    res.status(403).json({ error: 'Sin permisos de superadmin' });
+    return false;
+  }
+  return true;
+}
+
+// ==================== INSTITUCIONES ====================
+
+// Público: buscar institución por slug (usado en login)
+app.get('/api/instituciones/:slug', async (req, res) => {
+  try {
+    const r = await pool.request()
+      .input('slug', sql.NVarChar(50), req.params.slug)
+      .query('SELECT id, nombre, activo FROM Instituciones WHERE slug = @slug');
+    if (!r.recordset.length || !r.recordset[0].activo) {
+      return res.status(404).json({ error: 'Institución no encontrada' });
+    }
+    res.json(r.recordset[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
+// Superadmin: listar instituciones
+app.get('/api/superadmin/instituciones', async (req, res) => {
+  if (!checkSuperadmin(req, res)) return;
+  try {
+    const r = await pool.request().query(`
+      SELECT i.id, i.slug, i.nombre, i.activo,
+             i.created_at,
+             (SELECT COUNT(*) FROM Lideres l WHERE l.institucion_id = i.id AND l.activo = 1) AS lideres,
+             (SELECT COUNT(*) FROM Discipulos d WHERE d.institucion_id = i.id AND d.activo = 1) AS discipulos
+      FROM Instituciones i ORDER BY i.nombre
+    `);
+    res.json({ instituciones: r.recordset });
+  } catch (err) {
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
+// Superadmin: crear institución
+app.post('/api/superadmin/instituciones', async (req, res) => {
+  if (!checkSuperadmin(req, res)) return;
+  try {
+    const { slug, nombre } = req.body;
+    if (!slug || !nombre) return res.status(400).json({ error: 'slug y nombre requeridos' });
+    const r = await pool.request()
+      .input('slug', sql.NVarChar(50), slug.toLowerCase().replace(/[^a-z0-9-]/g, '-'))
+      .input('nombre', sql.NVarChar(200), nombre)
+      .query(`INSERT INTO Instituciones (slug, nombre)
+              OUTPUT INSERTED.id, INSERTED.slug, INSERTED.nombre
+              VALUES (@slug, @nombre)`);
+    res.status(201).json({ ok: true, institucion: r.recordset[0] });
+  } catch (err) {
+    if (err.originalError?.info?.message?.includes('UNIQUE')) {
+      return res.status(400).json({ error: 'El slug ya existe' });
+    }
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
+// Superadmin: editar institución
+app.put('/api/superadmin/instituciones/:id', async (req, res) => {
+  if (!checkSuperadmin(req, res)) return;
+  try {
+    const { slug, nombre } = req.body;
+    if (!slug || !nombre) return res.status(400).json({ error: 'slug y nombre requeridos' });
+    await pool.request()
+      .input('id', sql.Int, parseInt(req.params.id))
+      .input('slug', sql.NVarChar(50), slug.toLowerCase().replace(/[^a-z0-9-]/g, '-'))
+      .input('nombre', sql.NVarChar(200), nombre)
+      .query('UPDATE Instituciones SET slug=@slug, nombre=@nombre WHERE id=@id');
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.originalError?.info?.message?.includes('UNIQUE')) {
+      return res.status(400).json({ error: 'El slug ya existe' });
+    }
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
+// Superadmin: toggle activo
+app.patch('/api/superadmin/instituciones/:id/activo', async (req, res) => {
+  if (!checkSuperadmin(req, res)) return;
+  try {
+    const { activo } = req.body;
+    await pool.request()
+      .input('id', sql.Int, parseInt(req.params.id))
+      .input('activo', sql.Bit, activo ? 1 : 0)
+      .query('UPDATE Instituciones SET activo=@activo WHERE id=@id');
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Error en servidor' });
+  }
+});
+
 // ==================== LOGIN ====================
 
 app.post('/api/login', async (req, res) => {
   try {
-    const { usuario, contrasena } = req.body;
+    const { usuario, contrasena, inst } = req.body;
     if (!usuario || !contrasena) {
       return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
     }
+    if (!inst) {
+      return res.status(400).json({ error: 'Institución requerida' });
+    }
 
-    const request = pool.request();
-    request.input('usuario', sql.VarChar, usuario);
-    const result = await request.query(
-      `SELECT id, usuario, email, nombre, celular, contrasena, rol,
-              CONVERT(VARCHAR(10), fecha_nacimiento, 23) AS fecha_nacimiento
-       FROM Lideres WHERE usuario = @usuario AND activo = 1`
-    );
+    // Verificar que la institución exista y esté activa
+    const instRes = await pool.request()
+      .input('slug', sql.NVarChar(50), inst)
+      .query('SELECT id, nombre FROM Instituciones WHERE slug = @slug AND activo = 1');
+    if (!instRes.recordset.length) {
+      return res.status(404).json({ error: 'Institución no encontrada' });
+    }
+    const institucion = instRes.recordset[0];
+
+    const result = await pool.request()
+      .input('usuario', sql.VarChar, usuario)
+      .input('inst_id', sql.Int, institucion.id)
+      .query(
+        `SELECT id, usuario, email, nombre, celular, contrasena, rol,
+                institucion_id,
+                CONVERT(VARCHAR(10), fecha_nacimiento, 23) AS fecha_nacimiento
+         FROM Lideres WHERE usuario = @usuario AND activo = 1 AND institucion_id = @inst_id`
+      );
 
     if (!result.recordset.length) {
       return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
@@ -78,7 +201,9 @@ app.post('/api/login', async (req, res) => {
         email: lider.email,
         celular: lider.celular || '',
         fecha_nacimiento: lider.fecha_nacimiento || '',
-        rol: lider.rol || 'lider'
+        rol: lider.rol || 'lider',
+        institucion_id: lider.institucion_id,
+        inst: inst
       },
       grupos: grupos.recordset
     });
@@ -89,33 +214,10 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// ==================== REGISTRO ====================
+// ==================== REGISTRO (deshabilitado en modo multi-institución) ====================
 
 app.post('/api/registro', async (req, res) => {
-  try {
-    const { usuario, email, nombre, contrasena } = req.body;
-    if (!usuario || !email || !nombre || !contrasena) {
-      return res.status(400).json({ error: 'Todos los campos son requeridos' });
-    }
-    const salt = await bcrypt.genSalt(10);
-    const hash = await bcrypt.hash(contrasena, salt);
-    const request = pool.request();
-    request.input('usuario', sql.VarChar, usuario);
-    request.input('email', sql.VarChar, email);
-    request.input('nombre', sql.VarChar, nombre);
-    request.input('contrasena', sql.VarChar, hash);
-    await request.query(
-      `INSERT INTO Lideres (usuario, email, nombre, contrasena, fecha_registro)
-       VALUES (@usuario, @email, @nombre, @contrasena, GETDATE())`
-    );
-    res.json({ ok: true, mensaje: 'Líder registrado exitosamente' });
-  } catch (err) {
-    console.error('Error en registro:', err);
-    if (err.originalError?.info?.message?.includes('UNIQUE')) {
-      return res.status(400).json({ error: 'El usuario ya existe' });
-    }
-    res.status(500).json({ error: 'Error en servidor' });
-  }
+  res.status(403).json({ error: 'El registro público está deshabilitado. Contactar al administrador.' });
 });
 
 // ==================== GRUPOS ====================
@@ -138,15 +240,17 @@ app.post('/api/grupos', async (req, res) => {
     if (!lider_id || !nombre) return res.status(400).json({ error: 'lider_id y nombre requeridos' });
     const chk = await pool.request()
       .input('id', sql.Int, parseInt(lider_id))
-      .query('SELECT id FROM Lideres WHERE id = @id AND activo = 1');
+      .query('SELECT id, institucion_id FROM Lideres WHERE id = @id AND activo = 1');
     if (!chk.recordset.length) return res.status(403).json({ error: 'Sin permisos' });
+    const inst_id = chk.recordset[0].institucion_id;
     const r = await pool.request()
       .input('lider_id', sql.Int, parseInt(lider_id))
       .input('nombre', sql.VarChar, nombre)
       .input('dia', sql.VarChar, dia || null)
       .input('horario', sql.VarChar, horario || null)
       .input('lugar', sql.VarChar, lugar || null)
-      .query('INSERT INTO Grupos (lider_id, nombre, dia, horario, lugar) VALUES (@lider_id, @nombre, @dia, @horario, @lugar); SELECT CAST(SCOPE_IDENTITY() AS INT) AS id');
+      .input('inst_id', sql.Int, inst_id)
+      .query('INSERT INTO Grupos (lider_id, nombre, dia, horario, lugar, institucion_id) VALUES (@lider_id, @nombre, @dia, @horario, @lugar, @inst_id); SELECT CAST(SCOPE_IDENTITY() AS INT) AS id');
     res.json({ ok: true, id: r.recordset[0].id });
   } catch (err) {
     console.error('Error creando GC:', err);
@@ -204,18 +308,18 @@ app.patch('/api/grupos/:id/activo', async (req, res) => {
 app.get('/api/discipulos/buscar', async (req, res) => {
   try {
     const { q, lider_id, filtro_lider_id } = req.query;
-    const rol = await getRolLider(lider_id);
-    if (!esPastoral(rol)) return res.status(403).json({ error: 'Sin permisos' });
+    const info = await getLiderInfo(lider_id);
+    if (!esPastoral(info.rol)) return res.status(403).json({ error: 'Sin permisos' });
 
     const tieneNombre = q && q.trim().length >= 2;
     const tieneLider  = filtro_lider_id && parseInt(filtro_lider_id);
 
-    // Sin ningún filtro: retornar vacío
     if (!tieneNombre && !tieneLider) return res.json({ discipulos: [] });
 
     const req2 = pool.request();
     req2.input('filtro_lider_id', sql.Int, tieneLider ? parseInt(filtro_lider_id) : null);
     req2.input('q', sql.NVarChar(100), tieneNombre ? `%${q.trim()}%` : null);
+    req2.input('inst_id', sql.Int, info.institucion_id);
 
     const result = await req2.query(`
       SELECT d.id, d.nombre, d.celular,
@@ -225,6 +329,7 @@ app.get('/api/discipulos/buscar', async (req, res) => {
       JOIN Lideres l ON d.lider_id = l.id
       LEFT JOIN Grupos g ON d.grupo_id = g.id
       WHERE d.activo = 1
+        AND d.institucion_id = @inst_id
         AND (@filtro_lider_id IS NULL OR d.lider_id = @filtro_lider_id)
         AND (@q IS NULL OR d.nombre LIKE @q)
       ORDER BY d.nombre
@@ -240,11 +345,11 @@ app.get('/api/discipulos/buscar', async (req, res) => {
 app.get('/api/lideres/activos', async (req, res) => {
   try {
     const { lider_id } = req.query;
-    const rol = await getRolLider(lider_id);
-    if (!esPastoral(rol)) return res.status(403).json({ error: 'Sin permisos' });
-    const result = await pool.request().query(
-      `SELECT id, nombre FROM Lideres WHERE activo = 1 ORDER BY nombre`
-    );
+    const info = await getLiderInfo(lider_id);
+    if (!esPastoral(info.rol)) return res.status(403).json({ error: 'Sin permisos' });
+    const result = await pool.request()
+      .input('inst_id', sql.Int, info.institucion_id)
+      .query(`SELECT id, nombre FROM Lideres WHERE activo = 1 AND institucion_id = @inst_id ORDER BY nombre`);
     res.json({ lideres: result.recordset });
   } catch (err) {
     console.error('Error listando líderes activos:', err);
@@ -274,9 +379,9 @@ app.post('/api/discipulos', async (req, res) => {
 
     const g = await pool.request()
       .input('id', sql.Int, parseInt(grupo_id))
-      .query('SELECT lider_id FROM Grupos WHERE id = @id AND activo = 1');
+      .query('SELECT lider_id, institucion_id FROM Grupos WHERE id = @id AND activo = 1');
     if (!g.recordset.length) return res.status(400).json({ error: 'Grupo no encontrado' });
-    const lider_id = g.recordset[0].lider_id;
+    const { lider_id, institucion_id } = g.recordset[0];
 
     const r = await pool.request()
       .input('grupo_id', sql.Int, parseInt(grupo_id))
@@ -284,9 +389,10 @@ app.post('/api/discipulos', async (req, res) => {
       .input('nombre', sql.VarChar, nombre)
       .input('celular', sql.VarChar, celular || '')
       .input('fecha_nacimiento', sql.Date, fecha_nacimiento || null)
+      .input('inst_id', sql.Int, institucion_id)
       .query(
-        `INSERT INTO Discipulos (lider_id, grupo_id, nombre, celular, fecha_nacimiento)
-         VALUES (@lider_id, @grupo_id, @nombre, @celular, @fecha_nacimiento);
+        `INSERT INTO Discipulos (lider_id, grupo_id, nombre, celular, fecha_nacimiento, institucion_id)
+         VALUES (@lider_id, @grupo_id, @nombre, @celular, @fecha_nacimiento, @inst_id);
          SELECT CAST(SCOPE_IDENTITY() AS INT) AS id;`
       );
 
@@ -463,13 +569,16 @@ app.get('/api/lideres', async (req, res) => {
     const lider_id = parseInt(req.query.lider_id);
     const chk = await pool.request()
       .input('id', sql.Int, lider_id)
-      .query('SELECT rol FROM Lideres WHERE id = @id AND activo = 1');
-    if (chk.recordset[0]?.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
-    const result = await pool.request().query(
-      `SELECT id, nombre, usuario, email, rol, activo,
-              CONVERT(VARCHAR(10), fecha_nacimiento, 23) AS fecha_nacimiento
-       FROM Lideres ORDER BY nombre`
-    );
+      .query('SELECT rol, institucion_id FROM Lideres WHERE id = @id AND activo = 1');
+    const req_lider = chk.recordset[0];
+    if (req_lider?.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    const result = await pool.request()
+      .input('inst_id', sql.Int, req_lider.institucion_id)
+      .query(
+        `SELECT id, nombre, usuario, email, rol, activo,
+                CONVERT(VARCHAR(10), fecha_nacimiento, 23) AS fecha_nacimiento
+         FROM Lideres WHERE institucion_id = @inst_id ORDER BY nombre`
+      );
     res.json({ lideres: result.recordset });
   } catch (err) {
     console.error('Error listando líderes:', err);
@@ -485,8 +594,9 @@ app.post('/api/lideres', async (req, res) => {
     }
     const chk = await pool.request()
       .input('id', sql.Int, parseInt(lider_id))
-      .query('SELECT rol FROM Lideres WHERE id = @id AND activo = 1');
-    if (chk.recordset[0]?.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+      .query('SELECT rol, institucion_id FROM Lideres WHERE id = @id AND activo = 1');
+    const req_lider = chk.recordset[0];
+    if (req_lider?.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
     const hash = await bcrypt.hash(contrasena, 10);
     await pool.request()
       .input('nombre', sql.VarChar, nombre)
@@ -495,9 +605,10 @@ app.post('/api/lideres', async (req, res) => {
       .input('contrasena', sql.VarChar, hash)
       .input('rol', sql.VarChar, rol || 'lider')
       .input('fecha_nacimiento', sql.Date, fecha_nacimiento || null)
+      .input('inst_id', sql.Int, req_lider.institucion_id)
       .query(
-        `INSERT INTO Lideres (nombre, usuario, email, contrasena, rol, fecha_nacimiento)
-         VALUES (@nombre, @usuario, @email, @contrasena, @rol, @fecha_nacimiento)`
+        `INSERT INTO Lideres (nombre, usuario, email, contrasena, rol, fecha_nacimiento, institucion_id)
+         VALUES (@nombre, @usuario, @email, @contrasena, @rol, @fecha_nacimiento, @inst_id)`
       );
     res.json({ ok: true });
   } catch (err) {
@@ -601,18 +712,22 @@ app.get('/api/admin/discipulos', async (req, res) => {
     const lider_id = parseInt(req.query.lider_id);
     const chk = await pool.request()
       .input('id', sql.Int, lider_id)
-      .query('SELECT rol FROM Lideres WHERE id = @id AND activo = 1');
-    if (chk.recordset[0]?.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
-    const result = await pool.request().query(
-      `SELECT d.id, d.nombre, d.celular, d.lider_id, d.grupo_id, d.activo,
-              CONVERT(VARCHAR(10), d.fecha_nacimiento, 23) AS fecha_nacimiento,
-              l.nombre AS lider_nombre,
-              g.nombre AS grupo_nombre
-       FROM Discipulos d
-       JOIN Lideres l ON d.lider_id = l.id
-       LEFT JOIN Grupos g ON d.grupo_id = g.id
-       ORDER BY l.nombre, g.nombre, d.nombre`
-    );
+      .query('SELECT rol, institucion_id FROM Lideres WHERE id = @id AND activo = 1');
+    const req_lider = chk.recordset[0];
+    if (req_lider?.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    const result = await pool.request()
+      .input('inst_id', sql.Int, req_lider.institucion_id)
+      .query(
+        `SELECT d.id, d.nombre, d.celular, d.lider_id, d.grupo_id, d.activo,
+                CONVERT(VARCHAR(10), d.fecha_nacimiento, 23) AS fecha_nacimiento,
+                l.nombre AS lider_nombre,
+                g.nombre AS grupo_nombre
+         FROM Discipulos d
+         JOIN Lideres l ON d.lider_id = l.id
+         LEFT JOIN Grupos g ON d.grupo_id = g.id
+         WHERE d.institucion_id = @inst_id
+         ORDER BY l.nombre, g.nombre, d.nombre`
+      );
     res.json({ discipulos: result.recordset });
   } catch (err) {
     console.error('Error listando discípulos:', err);
@@ -689,10 +804,8 @@ app.get('/api/stats/mensual/grupo/:grupo_id/:anio/:mes', async (req, res) => {
   try {
     const { grupo_id, anio, mes } = req.params;
     const by = parseInt(req.query.by);
-    const chk = await pool.request()
-      .input('by', sql.Int, by)
-      .query('SELECT rol FROM Lideres WHERE id = @by AND activo = 1');
-    if (chk.recordset[0]?.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    const byInfo = await getLiderInfo(by);
+    if (byInfo.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
 
     const asistencia = await pool.request()
       .input('grupo_id', sql.Int, parseInt(grupo_id))
@@ -742,14 +855,15 @@ app.get('/api/stats/mensual/grupo/:grupo_id/:anio/:mes', async (req, res) => {
 app.get('/api/stats/entrevistas', async (req, res) => {
   try {
     const { desde, hasta, by, filtro_lider_id } = req.query;
-    const rol = await getRolLider(by);
-    if (!esPastoral(rol)) return res.status(403).json({ error: 'Sin permisos' });
+    const byInfo = await getLiderInfo(by);
+    if (!esPastoral(byInfo.rol)) return res.status(403).json({ error: 'Sin permisos' });
     if (!desde || !hasta) return res.status(400).json({ error: 'Fechas requeridas' });
 
     const req2 = pool.request()
       .input('desde', sql.Date, desde)
       .input('hasta', sql.Date, hasta)
-      .input('filtro_lider_id', sql.Int, filtro_lider_id ? parseInt(filtro_lider_id) : null);
+      .input('filtro_lider_id', sql.Int, filtro_lider_id ? parseInt(filtro_lider_id) : null)
+      .input('inst_id', sql.Int, byInfo.institucion_id);
 
     const result = await req2.query(`
       SELECT d.nombre AS discipulo,
@@ -764,6 +878,7 @@ app.get('/api/stats/entrevistas', async (req, res) => {
       LEFT JOIN Grupos g ON d.grupo_id = g.id
       JOIN Lideres le ON e.lider_id = le.id
       WHERE CAST(e.fecha AS DATE) BETWEEN @desde AND @hasta
+        AND d.institucion_id = @inst_id
         AND (@filtro_lider_id IS NULL OR d.lider_id = @filtro_lider_id)
       ORDER BY e.fecha DESC, d.nombre
     `);
@@ -779,10 +894,8 @@ app.get('/api/stats/mensual/:lider_id/:anio/:mes', async (req, res) => {
   try {
     const { lider_id, anio, mes } = req.params;
     const by = parseInt(req.query.by);
-    const chk = await pool.request()
-      .input('by', sql.Int, by)
-      .query('SELECT rol FROM Lideres WHERE id = @by AND activo = 1');
-    if (chk.recordset[0]?.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    const byInfo = await getLiderInfo(by);
+    if (byInfo.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
 
     const asistencia = await pool.request()
       .input('lider_id', sql.Int, parseInt(lider_id))
@@ -828,10 +941,8 @@ app.get('/api/stats/persona/:discipulo_id', async (req, res) => {
   try {
     const { discipulo_id } = req.params;
     const { desde, hasta, by } = req.query;
-    const chk = await pool.request()
-      .input('by', sql.Int, parseInt(by))
-      .query('SELECT rol FROM Lideres WHERE id = @by AND activo = 1');
-    if (chk.recordset[0]?.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    const byInfo = await getLiderInfo(by);
+    if (byInfo.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
 
     const registros = await pool.request()
       .input('discipulo_id', sql.Int, parseInt(discipulo_id))
@@ -865,10 +976,7 @@ app.get('/api/stats/persona/:discipulo_id', async (req, res) => {
 // ==================== ENTREVISTAS ====================
 
 async function getRolLider(lider_id) {
-  const r = await pool.request()
-    .input('id', sql.Int, parseInt(lider_id))
-    .query('SELECT rol FROM Lideres WHERE id = @id AND activo = 1');
-  return r.recordset[0]?.rol || 'lider';
+  return (await getLiderInfo(lider_id)).rol;
 }
 
 function esPastoral(rol) { return rol === 'pastoral' || rol === 'admin'; }
