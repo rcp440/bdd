@@ -48,7 +48,9 @@ if ($envOrigen -and (Test-Path $envOrigen)) {
 # 6. Instalar dependencias
 Write-Host "Instalando dependencias npm..." -ForegroundColor Yellow
 Set-Location $destino
-npm install --silent
+$npmCli = "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js"
+if (-not (Test-Path $npmCli)) { $npmCli = "$env:APPDATA\npm\node_modules\npm\bin\npm-cli.js" }
+node $npmCli install --silent
 
 # 7. Verificar que existe .env antes de arrancar
 if (-not (Test-Path "$destino\.env")) {
