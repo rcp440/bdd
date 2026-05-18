@@ -791,10 +791,10 @@ app.get('/api/admin/discipulos', async (req, res) => {
         `SELECT d.id, d.nombre, d.celular, d.lider_id, d.grupo_id, d.activo,
                 CONVERT(VARCHAR(10), d.fecha_nacimiento, 23) AS fecha_nacimiento,
                 d.observaciones,
-                l.nombre AS lider_nombre,
+                ISNULL(l.nombre, 'Sin asignar') AS lider_nombre,
                 g.nombre AS grupo_nombre
          FROM Discipulos d
-         JOIN Lideres l ON d.lider_id = l.id
+         LEFT JOIN Lideres l ON d.lider_id = l.id
          LEFT JOIN Grupos g ON d.grupo_id = g.id
          WHERE d.institucion_id = @inst_id
          ORDER BY l.nombre, g.nombre, d.nombre`
@@ -895,6 +895,188 @@ app.patch('/api/discipulos/:id/activo', async (req, res) => {
     console.error('Error toggle activo discípulo:', err);
     res.status(500).json({ error: 'Error en servidor' });
   }
+});
+
+// ==================== SECRETARIA: NUEVO DISCIPULO ====================
+
+app.post('/api/secretaria/discipulos', async (req, res) => {
+  try {
+    const { lider_id, nombre, celular, fecha_nacimiento, observaciones } = req.body;
+    if (!nombre) return res.status(400).json({ error: 'Nombre requerido' });
+    const info = await getLiderInfo(parseInt(lider_id));
+    if (info.rol !== 'secretaria' && info.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    const r = await pool.request()
+      .input('nombre',          sql.VarChar(100),       nombre)
+      .input('celular',         sql.VarChar(20),        celular || '')
+      .input('fecha_nacimiento',sql.Date,               fecha_nacimiento || null)
+      .input('observaciones',   sql.NVarChar(sql.MAX),  observaciones || null)
+      .input('inst_id',         sql.Int,                info.institucion_id)
+      .query(`INSERT INTO Discipulos (nombre, celular, fecha_nacimiento, observaciones, institucion_id)
+              OUTPUT INSERTED.id
+              VALUES (@nombre, @celular, @fecha_nacimiento, @observaciones, @inst_id)`);
+    res.status(201).json({ ok: true, id: r.recordset[0].id });
+  } catch (err) {
+    console.error('Error creando discipulo (secretaria):', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==================== EVENTOS ESPECIALES ====================
+
+app.get('/api/eventos', async (req, res) => {
+  try {
+    const info = await getLiderInfo(parseInt(req.query.lider_id));
+    if (info.rol !== 'secretaria' && info.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    const r = await pool.request()
+      .input('inst_id', sql.Int, info.institucion_id)
+      .query(`SELECT e.id, e.nombre, CONVERT(VARCHAR(10), e.fecha, 23) AS fecha,
+                     e.lugar, e.observacion, e.monto,
+                     COUNT(ea.id) AS total_asistentes
+              FROM EventosEspeciales e
+              LEFT JOIN EventoAsistencia ea ON ea.evento_id = e.id
+              WHERE e.institucion_id = @inst_id
+              GROUP BY e.id, e.nombre, e.fecha, e.lugar, e.observacion, e.monto
+              ORDER BY e.fecha DESC`);
+    res.json({ eventos: r.recordset });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/eventos', async (req, res) => {
+  try {
+    const { lider_id, nombre, fecha, lugar, observacion, monto } = req.body;
+    if (!nombre || !fecha) return res.status(400).json({ error: 'Nombre y fecha requeridos' });
+    const info = await getLiderInfo(parseInt(lider_id));
+    if (info.rol !== 'secretaria' && info.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    const r = await pool.request()
+      .input('inst_id',    sql.Int,           info.institucion_id)
+      .input('nombre',     sql.NVarChar(200), nombre)
+      .input('fecha',      sql.Date,          fecha)
+      .input('lugar',      sql.NVarChar(200), lugar || null)
+      .input('observacion',sql.NVarChar(sql.MAX), observacion || null)
+      .input('monto',      sql.Decimal(10,2), monto ? parseFloat(monto) : null)
+      .query(`INSERT INTO EventosEspeciales (institucion_id, nombre, fecha, lugar, observacion, monto)
+              OUTPUT INSERTED.id, INSERTED.nombre
+              VALUES (@inst_id, @nombre, @fecha, @lugar, @observacion, @monto)`);
+    res.status(201).json({ ok: true, evento: r.recordset[0] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/eventos/:id', async (req, res) => {
+  try {
+    const { lider_id, nombre, fecha, lugar, observacion, monto } = req.body;
+    if (!nombre || !fecha) return res.status(400).json({ error: 'Nombre y fecha requeridos' });
+    const info = await getLiderInfo(parseInt(lider_id));
+    if (info.rol !== 'secretaria' && info.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    await pool.request()
+      .input('id',         sql.Int,           parseInt(req.params.id))
+      .input('inst_id',    sql.Int,           info.institucion_id)
+      .input('nombre',     sql.NVarChar(200), nombre)
+      .input('fecha',      sql.Date,          fecha)
+      .input('lugar',      sql.NVarChar(200), lugar || null)
+      .input('observacion',sql.NVarChar(sql.MAX), observacion || null)
+      .input('monto',      sql.Decimal(10,2), monto ? parseFloat(monto) : null)
+      .query(`UPDATE EventosEspeciales
+              SET nombre=@nombre, fecha=@fecha, lugar=@lugar, observacion=@observacion, monto=@monto
+              WHERE id=@id AND institucion_id=@inst_id`);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/eventos/:id', async (req, res) => {
+  try {
+    const info = await getLiderInfo(parseInt(req.query.lider_id));
+    if (info.rol !== 'secretaria' && info.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    await pool.request()
+      .input('id',      sql.Int, parseInt(req.params.id))
+      .input('inst_id', sql.Int, info.institucion_id)
+      .query('DELETE FROM EventosEspeciales WHERE id=@id AND institucion_id=@inst_id');
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/eventos/:id/asistencia', async (req, res) => {
+  try {
+    const info = await getLiderInfo(parseInt(req.query.lider_id));
+    if (info.rol !== 'secretaria' && info.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    const evR = await pool.request()
+      .input('id',      sql.Int, parseInt(req.params.id))
+      .input('inst_id', sql.Int, info.institucion_id)
+      .query(`SELECT id, nombre, CONVERT(VARCHAR(10), fecha, 23) AS fecha,
+                     lugar, observacion, monto
+              FROM EventosEspeciales WHERE id=@id AND institucion_id=@inst_id`);
+    if (!evR.recordset.length) return res.status(404).json({ error: 'Evento no encontrado' });
+    const asistR = await pool.request()
+      .input('evento_id', sql.Int, parseInt(req.params.id))
+      .query(`SELECT ea.discipulo_id, ea.pago, ea.asistio,
+                     d.nombre, d.celular,
+                     ISNULL(l.nombre, 'Sin asignar') AS lider_nombre,
+                     g.nombre AS grupo_nombre
+              FROM EventoAsistencia ea
+              JOIN Discipulos d ON ea.discipulo_id = d.id
+              LEFT JOIN Lideres l ON d.lider_id = l.id
+              LEFT JOIN Grupos g ON d.grupo_id = g.id
+              WHERE ea.evento_id = @evento_id
+              ORDER BY d.nombre`);
+    res.json({ evento: evR.recordset[0], asistencia: asistR.recordset });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/eventos/:id/asistencia', async (req, res) => {
+  try {
+    const { lider_id, discipulo_id } = req.body;
+    const info = await getLiderInfo(parseInt(lider_id));
+    if (info.rol !== 'secretaria' && info.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    const dChk = await pool.request()
+      .input('id',      sql.Int, parseInt(discipulo_id))
+      .input('inst_id', sql.Int, info.institucion_id)
+      .query('SELECT id FROM Discipulos WHERE id=@id AND institucion_id=@inst_id');
+    if (!dChk.recordset.length) return res.status(400).json({ error: 'Discipulo no encontrado' });
+    await pool.request()
+      .input('evento_id', sql.Int, parseInt(req.params.id))
+      .input('disc_id',   sql.Int, parseInt(discipulo_id))
+      .query('INSERT INTO EventoAsistencia (evento_id, discipulo_id) VALUES (@evento_id, @disc_id)');
+    res.status(201).json({ ok: true });
+  } catch (err) {
+    if (err.originalError?.info?.message?.includes('UNIQUE') || err.originalError?.info?.message?.includes('uplicate')) {
+      return res.status(400).json({ error: 'Ya está en el evento' });
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/eventos/:id/asistencia/:disc_id', async (req, res) => {
+  try {
+    const { lider_id, pago, asistio } = req.body;
+    const info = await getLiderInfo(parseInt(lider_id));
+    if (info.rol !== 'secretaria' && info.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    const r = pool.request()
+      .input('evento_id', sql.Int, parseInt(req.params.id))
+      .input('disc_id',   sql.Int, parseInt(req.params.disc_id));
+    if (pago !== undefined && asistio !== undefined) {
+      r.input('pago',    sql.Decimal(10,2), pago !== null && pago !== '' ? parseFloat(pago) : null);
+      r.input('asistio', sql.Bit, asistio ? 1 : 0);
+      await r.query('UPDATE EventoAsistencia SET pago=@pago, asistio=@asistio WHERE evento_id=@evento_id AND discipulo_id=@disc_id');
+    } else if (pago !== undefined) {
+      r.input('pago', sql.Decimal(10,2), pago !== null && pago !== '' ? parseFloat(pago) : null);
+      await r.query('UPDATE EventoAsistencia SET pago=@pago WHERE evento_id=@evento_id AND discipulo_id=@disc_id');
+    } else if (asistio !== undefined) {
+      r.input('asistio', sql.Bit, asistio ? 1 : 0);
+      await r.query('UPDATE EventoAsistencia SET asistio=@asistio WHERE evento_id=@evento_id AND discipulo_id=@disc_id');
+    }
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/eventos/:id/asistencia/:disc_id', async (req, res) => {
+  try {
+    const info = await getLiderInfo(parseInt(req.query.lider_id));
+    if (info.rol !== 'secretaria' && info.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    await pool.request()
+      .input('evento_id', sql.Int, parseInt(req.params.id))
+      .input('disc_id',   sql.Int, parseInt(req.params.disc_id))
+      .query('DELETE FROM EventoAsistencia WHERE evento_id=@evento_id AND discipulo_id=@disc_id');
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ==================== STATS ====================
