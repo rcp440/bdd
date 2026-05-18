@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -229,11 +229,18 @@
 
 <div class="login-container">
   <div class="login-card">
+    <!-- Sin institución -->
+    <div id="noInst" style="display:none;text-align:center;padding:20px 0">
+      <div style="font-size:40px;margin-bottom:12px">🏛️</div>
+      <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">Institución no encontrada</div>
+      <div style="font-size:13px;color:var(--muted)">Verificá el enlace que recibiste o contactá a tu administrador.</div>
+    </div>
+
     <!-- Formulario de Login -->
-    <form class="login-form" onsubmit="handleLogin(event)">
+    <form class="login-form" id="loginForm" onsubmit="handleLogin(event)" style="display:none">
       <div class="login-header">
         <h1>Asistencia <span>·</span> al Grupo</h1>
-        <p>Ingresa con tu usuario</p>
+        <p id="instNombre" style="font-size:13px;color:var(--muted)">Cargando...</p>
       </div>
 
       <div class="form-group">
@@ -256,7 +263,31 @@
 </div>
 
 <script>
-  const API_URL = 'http://localhost:3000/api';
+  const API_URL = 'https://resist-turn-condition-patterns.trycloudflare.com/api';
+
+  const inst = new URLSearchParams(window.location.search).get('inst') || '';
+
+  async function initInst() {
+    if (!inst) {
+      document.getElementById('noInst').style.display = 'block';
+      return;
+    }
+    try {
+      const res = await fetch(`${API_URL}/instituciones/${encodeURIComponent(inst)}`);
+      if (!res.ok) {
+        document.getElementById('noInst').style.display = 'block';
+        return;
+      }
+      const data = await res.json();
+      document.getElementById('instNombre').textContent = data.nombre;
+      document.title = `${data.nombre} · Asistencia`;
+      document.getElementById('loginForm').style.display = 'block';
+    } catch {
+      document.getElementById('noInst').style.display = 'block';
+    }
+  }
+
+  initInst();
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -272,7 +303,7 @@
       const res = await fetch(API_URL + '/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usuario, contrasena })
+        body: JSON.stringify({ usuario, contrasena, inst })
       });
 
       const data = await res.json();
@@ -285,13 +316,17 @@
         sessionStorage.setItem('lider', JSON.stringify(data.lider));
         sessionStorage.setItem('grupos', JSON.stringify(data.grupos || []));
         sessionStorage.removeItem('grupo');
-        
+
         loginMsg.textContent = '✓ Ingreso exitoso, redirigiendo...';
         loginMsg.classList.remove('error');
         loginMsg.classList.add('success');
-        
+
         setTimeout(() => {
-          window.location.href = '/app.html';
+          if (data.lider.rol === 'secretaria') {
+            window.location.href = 'secretaria.html' + window.location.search;
+          } else {
+            window.location.href = 'app.html';
+          }
         }, 1000);
       }
     } catch (err) {

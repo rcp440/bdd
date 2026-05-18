@@ -737,12 +737,13 @@ app.get('/api/admin/discipulos', async (req, res) => {
       .input('id', sql.Int, lider_id)
       .query('SELECT rol, institucion_id FROM Lideres WHERE id = @id AND activo = 1');
     const req_lider = chk.recordset[0];
-    if (req_lider?.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    if (req_lider?.rol !== 'admin' && req_lider?.rol !== 'secretaria') return res.status(403).json({ error: 'Sin permisos' });
     const result = await pool.request()
       .input('inst_id', sql.Int, req_lider.institucion_id)
       .query(
         `SELECT d.id, d.nombre, d.celular, d.lider_id, d.grupo_id, d.activo,
                 CONVERT(VARCHAR(10), d.fecha_nacimiento, 23) AS fecha_nacimiento,
+                d.observaciones,
                 l.nombre AS lider_nombre,
                 g.nombre AS grupo_nombre
          FROM Discipulos d
@@ -761,31 +762,52 @@ app.get('/api/admin/discipulos', async (req, res) => {
 app.put('/api/discipulos/:id', async (req, res) => {
   try {
     const { lider_id, nombre, celular, fecha_nacimiento, grupo_id } = req.body;
+    const updateObs = 'observaciones' in req.body;
+    const observaciones = req.body.observaciones || null;
     if (!nombre && !grupo_id) return res.status(400).json({ error: 'Nombre o grupo_id requerido' });
     const chk = await pool.request()
       .input('id', sql.Int, parseInt(lider_id))
-      .query('SELECT rol FROM Lideres WHERE id = @id AND activo = 1');
-    const isAdmin = chk.recordset[0]?.rol === 'admin';
-    if (!isAdmin) {
+      .query('SELECT rol, institucion_id FROM Lideres WHERE id = @id AND activo = 1');
+    const rolInfo = chk.recordset[0];
+    const isAdmin = rolInfo?.rol === 'admin';
+    const isSecretaria = rolInfo?.rol === 'secretaria';
+    if (!isAdmin && !isSecretaria) {
       const own = await pool.request()
         .input('disc_id', sql.Int, parseInt(req.params.id))
         .input('lider_id', sql.Int, parseInt(lider_id))
         .query('SELECT id FROM Discipulos WHERE id = @disc_id AND lider_id = @lider_id');
       if (!own.recordset.length) return res.status(403).json({ error: 'Sin permisos' });
+    } else if (isSecretaria) {
+      const own = await pool.request()
+        .input('disc_id', sql.Int, parseInt(req.params.id))
+        .input('inst_id', sql.Int, rolInfo.institucion_id)
+        .query('SELECT id FROM Discipulos WHERE id = @disc_id AND institucion_id = @inst_id');
+      if (!own.recordset.length) return res.status(403).json({ error: 'Sin permisos' });
     }
     const req2 = pool.request();
     req2.input('id', sql.Int, parseInt(req.params.id));
-    req2.input('nombre', sql.VarChar, nombre || '');
-    req2.input('celular', sql.VarChar, celular || '');
+    req2.input('nombre', sql.VarChar(100), nombre || '');
+    req2.input('celular', sql.VarChar(20), celular || '');
     req2.input('fecha_nacimiento', sql.Date, fecha_nacimiento || null);
-    if (grupo_id) {
+    req2.input('updateObs', sql.Bit, updateObs ? 1 : 0);
+    req2.input('observaciones', sql.NVarChar(sql.MAX), observaciones);
+    if (grupo_id && isAdmin) {
       req2.input('grupo_id', sql.Int, parseInt(grupo_id));
       await req2.query(
-        `UPDATE Discipulos SET nombre=CASE WHEN @nombre='' THEN nombre ELSE @nombre END, celular=@celular, fecha_nacimiento=@fecha_nacimiento, grupo_id=@grupo_id WHERE id=@id`
+        `UPDATE Discipulos SET
+           nombre=CASE WHEN @nombre='' THEN nombre ELSE @nombre END,
+           celular=@celular, fecha_nacimiento=@fecha_nacimiento,
+           observaciones=CASE WHEN @updateObs=1 THEN @observaciones ELSE observaciones END,
+           grupo_id=@grupo_id
+         WHERE id=@id`
       );
     } else {
       await req2.query(
-        `UPDATE Discipulos SET nombre=@nombre, celular=@celular, fecha_nacimiento=@fecha_nacimiento WHERE id=@id`
+        `UPDATE Discipulos SET
+           nombre=CASE WHEN @nombre='' THEN nombre ELSE @nombre END,
+           celular=@celular, fecha_nacimiento=@fecha_nacimiento,
+           observaciones=CASE WHEN @updateObs=1 THEN @observaciones ELSE observaciones END
+         WHERE id=@id`
       );
     }
     res.json({ ok: true });
@@ -800,13 +822,21 @@ app.patch('/api/discipulos/:id/activo', async (req, res) => {
     const { lider_id, activo } = req.body;
     const chk = await pool.request()
       .input('id', sql.Int, parseInt(lider_id))
-      .query('SELECT rol FROM Lideres WHERE id = @id AND activo = 1');
-    const isAdmin = chk.recordset[0]?.rol === 'admin';
-    if (!isAdmin) {
+      .query('SELECT rol, institucion_id FROM Lideres WHERE id = @id AND activo = 1');
+    const rolInfo = chk.recordset[0];
+    const isAdmin = rolInfo?.rol === 'admin';
+    const isSecretaria = rolInfo?.rol === 'secretaria';
+    if (!isAdmin && !isSecretaria) {
       const own = await pool.request()
         .input('disc_id', sql.Int, parseInt(req.params.id))
         .input('lider_id', sql.Int, parseInt(lider_id))
         .query('SELECT id FROM Discipulos WHERE id = @disc_id AND lider_id = @lider_id');
+      if (!own.recordset.length) return res.status(403).json({ error: 'Sin permisos' });
+    } else if (isSecretaria) {
+      const own = await pool.request()
+        .input('disc_id', sql.Int, parseInt(req.params.id))
+        .input('inst_id', sql.Int, rolInfo.institucion_id)
+        .query('SELECT id FROM Discipulos WHERE id = @disc_id AND institucion_id = @inst_id');
       if (!own.recordset.length) return res.status(403).json({ error: 'Sin permisos' });
     }
     await pool.request()

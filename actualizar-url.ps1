@@ -34,7 +34,7 @@ if (-not $nuevaUrl.StartsWith("https://")) {
 
 $apiUrl = "$nuevaUrl/api"
 
-$archivos = @("index.html", "app.html", "admin.html", "stats.html", "superadmin.html")
+$archivos = @("index.html", "app.html", "admin.html", "stats.html", "superadmin.html", "secretaria.html")
 
 foreach ($archivo in $archivos) {
     $ruta = Join-Path $repoDir $archivo
@@ -63,7 +63,7 @@ Write-Host ""
 $confirmar = Read-Host "Publicar en GitHub ahora? (s/n)"
 if ($confirmar -eq "s" -or $confirmar -eq "S") {
     Set-Location $repoDir
-    git add index.html app.html admin.html stats.html superadmin.html
+    git add index.html app.html admin.html stats.html superadmin.html secretaria.html
     git commit -m "Actualizar URL Cloudflare: $nuevaUrl"
     git push
     Write-Host ""

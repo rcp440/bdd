@@ -322,7 +322,11 @@
         loginMsg.classList.add('success');
 
         setTimeout(() => {
-          window.location.href = 'app.html';
+          if (data.lider.rol === 'secretaria') {
+            window.location.href = 'secretaria.html' + window.location.search;
+          } else {
+            window.location.href = 'app.html';
+          }
         }, 1000);
       }
     } catch (err) {
