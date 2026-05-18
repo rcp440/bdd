@@ -49,6 +49,15 @@
     .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
     .modal-actions { display: flex; gap: 8px; margin-top: 4px; }
     .btn-cancel { flex: 1; background: var(--bg); color: var(--muted); border: 1px solid var(--border); padding: 9px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+    .btn-users { background: var(--green-bg); color: var(--green); }
+    .form-group select { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: 'DM Sans', sans-serif; outline: none; background: var(--bg); cursor: pointer; }
+    .form-group select:focus { border-color: var(--purple); box-shadow: 0 0 0 3px var(--purple-bg); }
+    .user-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .user-row:last-child { border-bottom: none; }
+    .role-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; text-transform: uppercase; }
+    .role-admin { background: var(--purple-bg); color: var(--purple); }
+    .role-secretaria { background: #e0f2fe; color: #0e7490; }
+    .role-lider { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
     /* LOGIN */
     .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
     .login-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 36px; width: 100%; max-width: 340px; }
@@ -123,6 +132,44 @@
   </div>
 </div>
 
+<!-- Modal usuarios -->
+<div class="modal-overlay" id="modalUsuarios" onclick="if(event.target===this)closeUsuarios()">
+  <div class="modal" style="max-width:460px;max-height:90vh;overflow-y:auto" onclick="event.stopPropagation()">
+    <h3>Usuarios · <span id="modalInstNombre" style="color:var(--purple)"></span></h3>
+    <div id="listaUsuarios" style="margin-bottom:16px;min-height:40px"></div>
+    <div style="border-top:1px solid var(--border);padding-top:14px">
+      <div class="section-title" style="margin-bottom:10px">Agregar usuario</div>
+      <div class="form-group">
+        <label>Nombre completo</label>
+        <input type="text" id="uNombre" placeholder="Nombre y apellido" maxlength="100">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div class="form-group">
+          <label>Usuario</label>
+          <input type="text" id="uUsuario" placeholder="usuario" autocomplete="off" maxlength="50">
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="password" id="uContrasena" placeholder="••••••" autocomplete="new-password">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Rol</label>
+        <select id="uRol">
+          <option value="lider">Lider</option>
+          <option value="secretaria">Secretaria</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+      <div id="addUserMsg" class="msg"></div>
+      <button class="btn-primary" onclick="agregarUsuario()">Agregar usuario</button>
+    </div>
+    <div style="margin-top:10px">
+      <button class="btn-cancel" style="width:100%" onclick="closeUsuarios()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal editar -->
 <div class="modal-overlay" id="modalEdit">
   <div class="modal">
@@ -145,7 +192,7 @@
 </div>
 
 <script>
-  const API_URL = 'http://localhost:3000/api';
+  const API_URL = 'https://resist-turn-condition-patterns.trycloudflare.com/api';
   let token = sessionStorage.getItem('superadmin_token') || '';
 
   function headers() {
@@ -201,6 +248,7 @@
               <div class="inst-stats">${i.lideres} líderes · ${i.discipulos} discípulos</div>
             </div>
             <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+              <button class="btn-sm btn-users" onclick="openUsuarios(${i.id},'${i.nombre.replace(/'/g,"\\'")}')">Usuarios</button>
               <button class="btn-sm btn-edit" onclick="openEdit(${i.id},'${i.slug}','${i.nombre.replace(/'/g,"\\'")}')">Editar</button>
               <button class="btn-sm btn-toggle" onclick="toggleInst(${i.id},${i.activo})">${i.activo ? 'Desactivar' : 'Activar'}</button>
             </div>
@@ -275,6 +323,74 @@
       });
       loadInstituciones();
     } catch {}
+  }
+
+  // ---- Usuarios por institución ----
+  let currentInstId = null;
+
+  function openUsuarios(id, nombre) {
+    currentInstId = id;
+    document.getElementById('modalInstNombre').textContent = nombre;
+    document.getElementById('uNombre').value = '';
+    document.getElementById('uUsuario').value = '';
+    document.getElementById('uContrasena').value = '';
+    document.getElementById('uRol').value = 'lider';
+    clearMsg(document.getElementById('addUserMsg'));
+    document.getElementById('modalUsuarios').classList.add('open');
+    loadUsuarios(id);
+  }
+
+  function closeUsuarios() {
+    document.getElementById('modalUsuarios').classList.remove('open');
+    currentInstId = null;
+  }
+
+  async function loadUsuarios(id) {
+    const lista = document.getElementById('listaUsuarios');
+    lista.innerHTML = '<div style="color:var(--muted);font-size:12px">Cargando...</div>';
+    try {
+      const res = await fetch(`${API_URL}/superadmin/instituciones/${id}/lideres`, { headers: headers() });
+      const data = await res.json();
+      if (!data.lideres?.length) {
+        lista.innerHTML = '<div style="color:var(--muted);font-size:12px">Sin usuarios.</div>';
+        return;
+      }
+      const roleClass = { admin: 'role-admin', secretaria: 'role-secretaria', lider: 'role-lider' };
+      lista.innerHTML = data.lideres.map(u => `
+        <div class="user-row">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:500">${u.nombre}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:1px">${u.usuario}${u.activo ? '' : ' · <span style="color:var(--red)">inactivo</span>'}</div>
+          </div>
+          <span class="role-badge ${roleClass[u.rol] || 'role-lider'}">${u.rol}</span>
+        </div>`).join('');
+    } catch { lista.innerHTML = '<div style="color:var(--red);font-size:12px">Error al cargar</div>'; }
+  }
+
+  async function agregarUsuario() {
+    if (!currentInstId) return;
+    const nombre    = document.getElementById('uNombre').value.trim();
+    const usuario   = document.getElementById('uUsuario').value.trim();
+    const contrasena = document.getElementById('uContrasena').value;
+    const rol       = document.getElementById('uRol').value;
+    const msg       = document.getElementById('addUserMsg');
+    clearMsg(msg);
+    if (!nombre || !usuario || !contrasena) { showMsg(msg, 'Completá todos los campos', 'error'); return; }
+    if (contrasena.length < 6) { showMsg(msg, 'La contraseña debe tener al menos 6 caracteres', 'error'); return; }
+    try {
+      const res = await fetch(`${API_URL}/superadmin/instituciones/${currentInstId}/lideres`, {
+        method: 'POST', headers: headers(),
+        body: JSON.stringify({ nombre, usuario, contrasena, rol })
+      });
+      const data = await res.json();
+      if (!res.ok) { showMsg(msg, data.error || 'Error', 'error'); return; }
+      showMsg(msg, `Usuario "${usuario}" creado como ${rol}`, 'success');
+      document.getElementById('uNombre').value = '';
+      document.getElementById('uUsuario').value = '';
+      document.getElementById('uContrasena').value = '';
+      loadUsuarios(currentInstId);
+      loadInstituciones();
+    } catch { showMsg(msg, 'Error de conexión', 'error'); }
   }
 
   // Auto-login si hay token guardado

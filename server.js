@@ -168,6 +168,53 @@ app.patch('/api/superadmin/instituciones/:id/activo', async (req, res) => {
   }
 });
 
+// Superadmin: listar usuarios de una institución
+app.get('/api/superadmin/instituciones/:id/lideres', async (req, res) => {
+  if (!checkSuperadmin(req, res)) return;
+  try {
+    const r = await pool.request()
+      .input('inst_id', sql.Int, parseInt(req.params.id))
+      .query(`SELECT id, nombre, usuario, rol, activo FROM Lideres WHERE institucion_id = @inst_id ORDER BY rol, nombre`);
+    res.json({ lideres: r.recordset });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Superadmin: agregar usuario a una institución
+app.post('/api/superadmin/instituciones/:id/lideres', async (req, res) => {
+  if (!checkSuperadmin(req, res)) return;
+  try {
+    const { nombre, usuario, contrasena, rol } = req.body;
+    if (!nombre || !usuario || !contrasena) {
+      return res.status(400).json({ error: 'Nombre, usuario y contraseña son requeridos' });
+    }
+    const cleanRol = ['admin', 'secretaria', 'lider'].includes(rol) ? rol : 'lider';
+    const inst_id = parseInt(req.params.id);
+    const instCheck = await pool.request()
+      .input('id', sql.Int, inst_id)
+      .query('SELECT id, slug FROM Instituciones WHERE id = @id');
+    if (!instCheck.recordset.length) return res.status(404).json({ error: 'Institución no encontrada' });
+    const inst = instCheck.recordset[0];
+    const hash = await bcrypt.hash(contrasena, 10);
+    await pool.request()
+      .input('nombre',     sql.VarChar(200), nombre)
+      .input('usuario',    sql.VarChar(100), usuario)
+      .input('email',      sql.VarChar(200), `${usuario}@${inst.slug}.local`)
+      .input('contrasena', sql.VarChar(200), hash)
+      .input('rol',        sql.VarChar(50),  cleanRol)
+      .input('inst_id',    sql.Int,          inst_id)
+      .query(`INSERT INTO Lideres (nombre, usuario, email, contrasena, rol, institucion_id, fecha_registro)
+              VALUES (@nombre, @usuario, @email, @contrasena, @rol, @inst_id, GETDATE())`);
+    res.status(201).json({ ok: true });
+  } catch (err) {
+    if (err.originalError?.info?.message?.includes('UNIQUE')) {
+      return res.status(400).json({ error: 'El usuario ya existe en esta institución' });
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ==================== LOGIN ====================
 
 app.post('/api/login', async (req, res) => {
