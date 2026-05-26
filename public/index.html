@@ -315,6 +315,7 @@
       } else {
         sessionStorage.setItem('lider', JSON.stringify(data.lider));
         sessionStorage.setItem('grupos', JSON.stringify(data.grupos || []));
+        sessionStorage.setItem('inst', data.lider.inst || inst || '');
         sessionStorage.removeItem('grupo');
 
         loginMsg.textContent = '✓ Ingreso exitoso, redirigiendo...';

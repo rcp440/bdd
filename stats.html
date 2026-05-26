@@ -138,7 +138,8 @@
   const lider = JSON.parse(sessionStorage.getItem('lider'));
 
   if (!lider || (lider.rol !== 'admin' && lider.rol !== 'pastoral')) {
-    window.location.href = 'index.html';
+    const inst = sessionStorage.getItem('inst') || lider?.inst || '';
+    window.location.href = 'index.html' + (inst ? `?inst=${inst}` : '');
     throw new Error('Sin permisos');
   }
 

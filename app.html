@@ -368,8 +368,14 @@
   let people = [];
   let selectedDate = new Date().toISOString().slice(0, 10);
 
+  function instIndex() {
+    const inst = sessionStorage.getItem('inst') || lider?.inst || '';
+    return 'index.html' + (inst ? `?inst=${inst}` : '');
+  }
+
   if (!lider) {
-    window.location.href = 'index.html';
+    const inst = sessionStorage.getItem('inst') || '';
+    window.location.href = 'index.html' + (inst ? `?inst=${inst}` : '');
     throw new Error('No autenticado');
   }
 
@@ -738,8 +744,9 @@
 
   function logout() {
     if (confirm('¿Estás seguro de que deseas salir?')) {
+      const href = instIndex();
       sessionStorage.clear();
-      window.location.href = 'index.html';
+      window.location.href = href;
     }
   }
 

@@ -197,47 +197,14 @@
   <div class="list" id="list"></div>
 </div>
 
+<div class="add-section">
+  <button class="save-btn" id="saveBtn" onclick="guardar()"><span class="icon">💾</span> Guardar asistencia</button>
+</div>
+
 <div id="grupoSelector" class="grupo-selector" style="display:none">
   <h2 id="gsLiderNombre"></h2>
   <p>Seleccioná el GC con el que vas a trabajar hoy</p>
   <div class="grupo-list" id="gsGrupos"></div>
-</div>
-
-<div class="modal-overlay" id="modalGruposLider" onclick="if(event.target===this)closeGruposModal()">
-  <div class="modal" style="max-width:420px;max-height:85vh;overflow-y:auto">
-    <div class="modal-header">
-      <span class="modal-title">Mis GC</span>
-      <button class="modal-close" onclick="closeGruposModal()">×</button>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">GC</span>
-      <button class="mini-btn" onclick="toggleNuevoGrupoFormApp()">+ Nuevo GC</button>
-    </div>
-    <div id="ngFormApp" style="display:none;margin-bottom:12px">
-      <div style="display:flex;flex-direction:column;gap:6px">
-        <input type="text" id="ngNombreApp" class="mini-inp" placeholder="Nombre del GC">
-        <div style="display:flex;gap:6px">
-          <select id="ngDiaApp" class="mini-inp" style="flex:1">
-            <option value="">Día...</option>
-            <option>Lunes</option><option>Martes</option><option>Miércoles</option>
-            <option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option>
-          </select>
-          <input type="time" id="ngHorarioApp" class="mini-inp" style="flex:0 0 auto;width:100px">
-        </div>
-        <input type="text" id="ngLugarApp" class="mini-inp" placeholder="Lugar">
-        <div style="display:flex;gap:6px">
-          <button class="mini-btn" style="flex:1" onclick="crearGrupoApp()">Crear GC</button>
-          <button class="mini-btn-g" onclick="toggleNuevoGrupoFormApp()">Cancelar</button>
-        </div>
-      </div>
-      <div id="ngMsgApp" class="modal-msg" style="margin-top:6px"></div>
-    </div>
-    <div id="gruposContainerApp"><div style="text-align:center;padding:16px;color:var(--muted)">Cargando...</div></div>
-  </div>
-</div>
-
-<div class="add-section">
-  <button class="save-btn" id="saveBtn" onclick="guardar()"><span class="icon">💾</span> Guardar asistencia</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -284,6 +251,39 @@
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalGruposLider" onclick="if(event.target===this)closeGruposModal()">
+  <div class="modal" style="max-width:420px;max-height:85vh;overflow-y:auto">
+    <div class="modal-header">
+      <span class="modal-title">Mis GC</span>
+      <button class="modal-close" onclick="closeGruposModal()">×</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">GC</span>
+      <button class="mini-btn" onclick="toggleNuevoGrupoFormApp()">+ Nuevo GC</button>
+    </div>
+    <div id="ngFormApp" style="display:none;margin-bottom:12px">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <input type="text" id="ngNombreApp" class="mini-inp" placeholder="Nombre del GC">
+        <div style="display:flex;gap:6px">
+          <select id="ngDiaApp" class="mini-inp" style="flex:1">
+            <option value="">Día...</option>
+            <option>Lunes</option><option>Martes</option><option>Miércoles</option>
+            <option>Jueves</option><option>Viernes</option><option>Sábado</option><option>Domingo</option>
+          </select>
+          <input type="time" id="ngHorarioApp" class="mini-inp" style="flex:0 0 auto;width:100px">
+        </div>
+        <input type="text" id="ngLugarApp" class="mini-inp" placeholder="Lugar">
+        <div style="display:flex;gap:6px">
+          <button class="mini-btn" style="flex:1" onclick="crearGrupoApp()">Crear GC</button>
+          <button class="mini-btn-g" onclick="toggleNuevoGrupoFormApp()">Cancelar</button>
+        </div>
+      </div>
+      <div id="ngMsgApp" class="modal-msg" style="margin-top:6px"></div>
+    </div>
+    <div id="gruposContainerApp"><div style="text-align:center;padding:16px;color:var(--muted)">Cargando...</div></div>
   </div>
 </div>
 
@@ -361,15 +361,21 @@
 </div>
 
 <script>
-  const API_URL = 'http://localhost:3000/api';
+  const API_URL = 'https://resist-turn-condition-patterns.trycloudflare.com/api';
   let lider = JSON.parse(sessionStorage.getItem('lider'));
   let grupo = JSON.parse(sessionStorage.getItem('grupo'));
   let grupos = JSON.parse(sessionStorage.getItem('grupos')) || [];
   let people = [];
   let selectedDate = new Date().toISOString().slice(0, 10);
 
+  function instIndex() {
+    const inst = sessionStorage.getItem('inst') || lider?.inst || '';
+    return 'index.html' + (inst ? `?inst=${inst}` : '');
+  }
+
   if (!lider) {
-    window.location.href = 'index.html';
+    const inst = sessionStorage.getItem('inst') || '';
+    window.location.href = 'index.html' + (inst ? `?inst=${inst}` : '');
     throw new Error('No autenticado');
   }
 
@@ -392,13 +398,17 @@
     const lista = document.getElementById('gsGrupos');
     lista.innerHTML = grupos.map(g => {
       const info = [g.dia, g.horario, g.lugar].filter(Boolean).join(' · ');
-      return `<button class="grupo-btn" onclick="elegirGrupo(${g.id})">${g.nombre}${info ? `<br><span style="font-size:11px;font-weight:normal;opacity:.75">${info}</span>` : ''}</button>`;
+      return `<button class="grupo-btn" onclick="elegirGrupo(${g.id})">
+        <div>${g.nombre}</div>
+        ${info ? `<div style="font-size:11px;color:var(--muted);margin-top:3px;font-weight:400">${info}</div>` : ''}
+      </button>`;
     }).join('');
     document.getElementById('grupoSelector').style.display = 'flex';
   }
 
   function elegirGrupo(id) {
-    grupo = gruposAppData.find(g => g.id === id) || grupos.find(g => g.id === id) || { id };
+    const g = gruposAppData.find(g => g.id === id) || grupos.find(g => g.id === id) || { id };
+    grupo = g;
     sessionStorage.setItem('grupo', JSON.stringify(grupo));
     document.getElementById('grupoSelector').style.display = 'none';
     document.getElementById('modalGruposLider').classList.remove('open');
@@ -734,8 +744,9 @@
 
   function logout() {
     if (confirm('¿Estás seguro de que deseas salir?')) {
+      const href = instIndex();
       sessionStorage.clear();
-      window.location.href = 'index.html';
+      window.location.href = href;
     }
   }
 
@@ -1056,6 +1067,7 @@
   }
 
   function iniciarRenombrarApp(grupoId) {
+    document.getElementById(`gname-${grupoId}`).parentElement.querySelector('div[style*="margin-top"]')?.style && null;
     document.getElementById(`grename-${grupoId}`).style.display = 'block';
     document.getElementById(`ri-n-${grupoId}`).focus();
   }
@@ -1156,6 +1168,7 @@
     document.getElementById('buscarDiscInput').value = '';
     document.getElementById('buscarDiscResults').innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:13px">Seleccioná un líder o escribí un nombre</div>';
     document.getElementById('modalBuscarDisc').classList.add('open');
+    // Cargar lista de líderes en el select
     const sel = document.getElementById('buscarLiderSelect');
     sel.innerHTML = '<option value="">Todos los líderes</option>';
     try {
@@ -1354,5 +1367,4 @@
 
 </body>
 </html>
-
 

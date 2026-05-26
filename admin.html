@@ -207,8 +207,14 @@
   const API_URL = 'https://resist-turn-condition-patterns.trycloudflare.com/api';
   const lider = JSON.parse(sessionStorage.getItem('lider'));
 
+  function instIndex() {
+    const inst = sessionStorage.getItem('inst') || lider?.inst || '';
+    return 'index.html' + (inst ? `?inst=${inst}` : '');
+  }
+
   if (!lider || lider.rol !== 'admin') {
-    window.location.href = 'index.html';
+    const inst = sessionStorage.getItem('inst') || '';
+    window.location.href = 'index.html' + (inst ? `?inst=${inst}` : '');
     throw new Error('Sin permisos');
   }
 
