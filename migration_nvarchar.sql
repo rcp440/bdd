@@ -17,6 +17,24 @@ IF EXISTS (SELECT 1 FROM sys.key_constraints WHERE parent_object_id = OBJECT_ID(
 IF EXISTS (SELECT 1 FROM sys.key_constraints WHERE parent_object_id = OBJECT_ID('Lideres') AND name = 'UQ__Lideres__usuario')
     ALTER TABLE Lideres DROP CONSTRAINT UQ__Lideres__usuario;
 
+-- Soltar default constraint de 'rol' si existe (nombre autogenerado)
+DECLARE @dfRol NVARCHAR(200);
+SELECT @dfRol = dc.name
+FROM sys.default_constraints dc
+JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+WHERE dc.parent_object_id = OBJECT_ID('Lideres') AND c.name = 'rol';
+IF @dfRol IS NOT NULL
+    EXEC('ALTER TABLE Lideres DROP CONSTRAINT [' + @dfRol + ']');
+
+-- Soltar default constraint de 'celular' si existe
+DECLARE @dfCelular NVARCHAR(200);
+SELECT @dfCelular = dc.name
+FROM sys.default_constraints dc
+JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+WHERE dc.parent_object_id = OBJECT_ID('Lideres') AND c.name = 'celular';
+IF @dfCelular IS NOT NULL
+    EXEC('ALTER TABLE Lideres DROP CONSTRAINT [' + @dfCelular + ']');
+
 -- Ahora sí alterar columnas de Lideres
 ALTER TABLE Lideres ALTER COLUMN nombre     NVARCHAR(100) NOT NULL;
 ALTER TABLE Lideres ALTER COLUMN usuario    NVARCHAR(50)  NOT NULL;
