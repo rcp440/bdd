@@ -4,7 +4,7 @@
 # ============================================================
 
 $logFile   = "$env:TEMP\cloudflared_tunnel.log"
-$archivos  = @("index.html", "app.html", "admin.html", "stats.html")
+$archivos  = @("index.html", "app.html", "admin.html", "stats.html", "secretaria.html", "superadmin.html")
 $timeoutSeg = 40
 
 # ---- Directorio del repo (donde están los HTML y se hace git push) ----
