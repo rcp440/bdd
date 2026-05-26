@@ -1,4 +1,4 @@
-Ôªø<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -203,7 +203,7 @@
 
     .divider::before,
     .divider::after {
-      content: '‚îÄ';
+      content: '-';
       display: inline-block;
       width: 60px;
       vertical-align: middle;
@@ -229,17 +229,17 @@
 
 <div class="login-container">
   <div class="login-card">
-    <!-- Sin instituci√≥n -->
+    <!-- Sin instituciÛn -->
     <div id="noInst" style="display:none;text-align:center;padding:20px 0">
-      <div style="font-size:40px;margin-bottom:12px">üèõÔ∏è</div>
-      <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">Instituci√≥n no encontrada</div>
-      <div style="font-size:13px;color:var(--muted)">Verific√° el enlace que recibiste o contact√° a tu administrador.</div>
+      <div style="font-size:40px;margin-bottom:12px">???</div>
+      <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px">InstituciÛn no encontrada</div>
+      <div style="font-size:13px;color:var(--muted)">Verific· el enlace que recibiste o contact· a tu administrador.</div>
     </div>
 
     <!-- Formulario de Login -->
     <form class="login-form" id="loginForm" onsubmit="handleLogin(event)" style="display:none">
       <div class="login-header">
-        <h1>Asistencia <span>¬∑</span> al Grupo</h1>
+        <h1>Asistencia <span>∑</span> al Grupo</h1>
         <p id="instNombre" style="font-size:13px;color:var(--muted)">Cargando...</p>
       </div>
 
@@ -249,8 +249,8 @@
       </div>
 
       <div class="form-group">
-        <label for="contrasena">Contrase√±a</label>
-        <input type="password" id="contrasena" placeholder="Tu contrase√±a" required>
+        <label for="contrasena">ContraseÒa</label>
+        <input type="password" id="contrasena" placeholder="Tu contraseÒa" required>
       </div>
 
       <div id="loginMessage" class="message"></div>
@@ -263,7 +263,7 @@
 </div>
 
 <script>
-  const API_URL = 'https://resist-turn-condition-patterns.trycloudflare.com/api';
+  const API_URL = 'https://candidate-awareness-building-steps.trycloudflare.com/api';
 
   const inst = new URLSearchParams(window.location.search).get('inst') || '';
 
@@ -280,7 +280,7 @@
       }
       const data = await res.json();
       document.getElementById('instNombre').textContent = data.nombre;
-      document.title = `${data.nombre} ¬∑ Asistencia`;
+      document.title = `${data.nombre} ∑ Asistencia`;
       document.getElementById('loginForm').style.display = 'block';
     } catch {
       document.getElementById('noInst').style.display = 'block';
@@ -318,7 +318,7 @@
         sessionStorage.setItem('inst', data.lider.inst || inst || '');
         sessionStorage.removeItem('grupo');
 
-        loginMsg.textContent = '‚úì Ingreso exitoso, redirigiendo...';
+        loginMsg.textContent = '? Ingreso exitoso, redirigiendo...';
         loginMsg.classList.remove('error');
         loginMsg.classList.add('success');
 
@@ -331,7 +331,7 @@
         }, 1000);
       }
     } catch (err) {
-      loginMsg.textContent = 'Error de conexi√≥n con el servidor';
+      loginMsg.textContent = 'Error de conexiÛn con el servidor';
       loginMsg.classList.remove('success');
       loginMsg.classList.add('error');
       console.error(err);

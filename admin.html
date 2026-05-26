@@ -1,9 +1,9 @@
-Ôªø<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Administraci√≥n - Asistencia</title>
+  <title>AdministraciÛn - Asistencia</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -81,18 +81,18 @@
 <div class="app">
   <div class="header">
     <div class="header-top">
-      <h1>Admin <span>¬∑</span> L√≠deres</h1>
-      <button class="back-btn" onclick="window.location.href='app.html'">‚Üê Volver</button>
+      <h1>Admin <span>∑</span> LÌderes</h1>
+      <button class="back-btn" onclick="window.location.href='app.html'">? Volver</button>
     </div>
   </div>
 
   <div class="section">
-    <div class="section-title">L√≠deres registrados</div>
+    <div class="section-title">LÌderes registrados</div>
     <div id="lideresList"><div class="empty">Cargando...</div></div>
   </div>
 
   <div class="section">
-    <div class="section-title">Nuevo l√≠der</div>
+    <div class="section-title">Nuevo lÌder</div>
     <div class="form-card">
       <div class="form-group">
         <label>Nombre completo</label>
@@ -107,8 +107,8 @@
         <input type="email" id="fEmail" placeholder="email@ejemplo.com">
       </div>
       <div class="form-group">
-        <label>Contrase√±a</label>
-        <input type="password" id="fContrasena" placeholder="M√≠nimo 6 caracteres" autocomplete="new-password">
+        <label>ContraseÒa</label>
+        <input type="password" id="fContrasena" placeholder="MÌnimo 6 caracteres" autocomplete="new-password">
       </div>
       <div class="form-group">
         <label>Fecha de nacimiento</label>
@@ -117,12 +117,12 @@
       <div class="form-group">
         <label>Rol</label>
         <select id="fRol">
-          <option value="lider">L√≠der</option>
+          <option value="lider">LÌder</option>
           <option value="pastoral">Pastoral</option>
           <option value="admin">Administrador</option>
         </select>
       </div>
-      <button class="submit-btn" id="btnCrear" onclick="crearLider()">Crear l√≠der</button>
+      <button class="submit-btn" id="btnCrear" onclick="crearLider()">Crear lÌder</button>
       <div id="formMsg" class="msg"></div>
     </div>
   </div>
@@ -133,7 +133,7 @@
   <div class="modal" style="max-width:480px">
     <div class="modal-header">
       <span class="modal-title" id="gruposTitle">Grupos</span>
-      <button class="modal-close" onclick="document.getElementById('modalGrupos').classList.remove('open')">√ó</button>
+      <button class="modal-close" onclick="document.getElementById('modalGrupos').classList.remove('open')">◊</button>
     </div>
     <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
       <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">GC</span>
@@ -144,9 +144,9 @@
         <input type="text" id="ngNombre" class="mini-input" placeholder="Nombre del GC">
         <div style="display:flex;gap:6px">
           <select id="ngDia" class="mini-input" style="flex:1">
-            <option value="">D√≠a...</option>
-            <option>Lunes</option><option>Martes</option><option>Mi√©rcoles</option>
-            <option>Jueves</option><option>Viernes</option><option>S√°bado</option><option>Domingo</option>
+            <option value="">DÌa...</option>
+            <option>Lunes</option><option>Martes</option><option>MiÈrcoles</option>
+            <option>Jueves</option><option>Viernes</option><option>S·bado</option><option>Domingo</option>
           </select>
           <input type="time" id="ngHorario" class="mini-input" style="flex:0 0 auto;width:100px">
         </div>
@@ -162,12 +162,12 @@
   </div>
 </div>
 
-<!-- Modal de edici√≥n -->
+<!-- Modal de ediciÛn -->
 <div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-title">Editar l√≠der</span>
-      <button class="modal-close" onclick="closeModalDirect()">√ó</button>
+      <span class="modal-title">Editar lÌder</span>
+      <button class="modal-close" onclick="closeModalDirect()">◊</button>
     </div>
     <div class="form-group">
       <label>Nombre completo</label>
@@ -184,7 +184,7 @@
     <div class="form-group">
       <label>Rol</label>
       <select id="eRol">
-        <option value="lider">L√≠der</option>
+        <option value="lider">LÌder</option>
         <option value="pastoral">Pastoral</option>
         <option value="admin">Administrador</option>
       </select>
@@ -194,9 +194,9 @@
       <input type="date" id="eFechaNac">
     </div>
     <div class="form-group">
-      <label>Nueva contrase√±a</label>
-      <input type="password" id="eContrasena" placeholder="Dejar vac√≠o para no cambiar" autocomplete="new-password">
-      <div class="form-hint">M√≠nimo 6 caracteres si se ingresa</div>
+      <label>Nueva contraseÒa</label>
+      <input type="password" id="eContrasena" placeholder="Dejar vacÌo para no cambiar" autocomplete="new-password">
+      <div class="form-hint">MÌnimo 6 caracteres si se ingresa</div>
     </div>
     <button class="submit-btn" id="btnGuardar" onclick="guardarEdicion()">Guardar cambios</button>
     <div id="editMsg" class="msg"></div>
@@ -204,7 +204,7 @@
 </div>
 
 <script>
-  const API_URL = 'https://resist-turn-condition-patterns.trycloudflare.com/api';
+  const API_URL = 'https://candidate-awareness-building-steps.trycloudflare.com/api';
   const lider = JSON.parse(sessionStorage.getItem('lider'));
 
   function instIndex() {
@@ -237,7 +237,7 @@
       const res = await fetch(`${API_URL}/lideres?lider_id=${lider.id}`);
       const data = await res.json();
       if (!data.lideres || !data.lideres.length) {
-        container.innerHTML = '<div class="empty">No hay l√≠deres registrados</div>';
+        container.innerHTML = '<div class="empty">No hay lÌderes registrados</div>';
         return;
       }
       lideresCached = data.lideres;
@@ -248,7 +248,7 @@
           </div>
           <div class="leader-info">
             <div class="leader-name">${l.nombre}</div>
-            <div class="leader-sub">${l.usuario} ¬∑ ${l.email}${l.fecha_nacimiento ? ' ¬∑ ' + fmtFecha(l.fecha_nacimiento) : ''}</div>
+            <div class="leader-sub">${l.usuario} ∑ ${l.email}${l.fecha_nacimiento ? ' ∑ ' + fmtFecha(l.fecha_nacimiento) : ''}</div>
             <div style="margin-top:4px">
               <span class="badge ${l.rol === 'admin' ? 'badge-admin' : l.rol === 'pastoral' ? 'badge-pastoral' : 'badge-lider'}">${l.rol}</span>
               <span class="badge ${l.activo ? 'badge-activo' : 'badge-inactivo'}">${l.activo ? 'activo' : 'inactivo'}</span>
@@ -269,7 +269,7 @@
         btn.addEventListener('click', () => toggleActivo(parseInt(btn.dataset.id), btn.dataset.activo === 'true'));
       });
     } catch (err) {
-      container.innerHTML = '<div class="empty">Error al cargar l√≠deres</div>';
+      container.innerHTML = '<div class="empty">Error al cargar lÌderes</div>';
     }
   }
 
@@ -311,7 +311,7 @@
       return;
     }
     if (contrasena && contrasena.length < 6) {
-      msg.textContent = 'La contrase√±a debe tener m√≠nimo 6 caracteres';
+      msg.textContent = 'La contraseÒa debe tener mÌnimo 6 caracteres';
       msg.className = 'msg err';
       return;
     }
@@ -334,13 +334,13 @@
         msg.textContent = data.error || 'Error al guardar';
         msg.className = 'msg err';
       } else {
-        msg.textContent = '‚úì Cambios guardados';
+        msg.textContent = '? Cambios guardados';
         msg.className = 'msg ok';
         loadLideres();
         setTimeout(() => closeModalDirect(), 1500);
       }
     } catch (err) {
-      msg.textContent = 'Error de conexi√≥n';
+      msg.textContent = 'Error de conexiÛn';
       msg.className = 'msg err';
     } finally {
       btn.disabled = false;
@@ -349,7 +349,7 @@
   }
 
   async function toggleActivo(id, activo) {
-    if (!confirm(`¬ø${activo ? 'Desactivar' : 'Activar'} este l√≠der?`)) return;
+    if (!confirm(`ø${activo ? 'Desactivar' : 'Activar'} este lÌder?`)) return;
     try {
       const res = await fetch(`${API_URL}/lideres/${id}/activo`, {
         method: 'PATCH',
@@ -359,7 +359,7 @@
       if (res.ok) loadLideres();
       else alert('Error al actualizar');
     } catch (err) {
-      alert('Error de conexi√≥n');
+      alert('Error de conexiÛn');
     }
   }
 
@@ -379,7 +379,7 @@
       return;
     }
     if (contrasena.length < 6) {
-      msg.textContent = 'La contrase√±a debe tener m√≠nimo 6 caracteres';
+      msg.textContent = 'La contraseÒa debe tener mÌnimo 6 caracteres';
       msg.className = 'msg err';
       return;
     }
@@ -399,7 +399,7 @@
         msg.textContent = data.error || 'Error al crear';
         msg.className = 'msg err';
       } else {
-        msg.textContent = '‚úì L√≠der creado exitosamente';
+        msg.textContent = '? LÌder creado exitosamente';
         msg.className = 'msg ok';
         document.getElementById('fNombre').value = '';
         document.getElementById('fUsuario').value = '';
@@ -411,11 +411,11 @@
         setTimeout(() => { msg.className = 'msg'; }, 3000);
       }
     } catch (err) {
-      msg.textContent = 'Error de conexi√≥n';
+      msg.textContent = 'Error de conexiÛn';
       msg.className = 'msg err';
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Crear l√≠der';
+      btn.textContent = 'Crear lÌder';
     }
   }
 
@@ -451,7 +451,7 @@
       gruposData = data.grupos || [];
 
       if (!gruposData.length) {
-        container.innerHTML = '<div class="empty">Sin GC. Cre√° el primero.</div>';
+        container.innerHTML = '<div class="empty">Sin GC. Cre· el primero.</div>';
         return;
       }
 
@@ -467,13 +467,13 @@
     }
   }
 
-  const DIAS_ADMIN = ['Lunes','Martes','Mi√©rcoles','Jueves','Viernes','S√°bado','Domingo'];
+  const DIAS_ADMIN = ['Lunes','Martes','MiÈrcoles','Jueves','Viernes','S·bado','Domingo'];
 
   function renderGrupos() {
     const container = document.getElementById('gruposContainer');
     container.innerHTML = gruposData.map(g => {
       const otrosGrupos = gruposData.filter(og => og.id !== g.id);
-      const info = [g.dia, g.horario, g.lugar].filter(Boolean).join(' ¬∑ ');
+      const info = [g.dia, g.horario, g.lugar].filter(Boolean).join(' ∑ ');
       const discsHtml = g.discipulos.length
         ? g.discipulos.map(d => `
             <div class="disc-row">
@@ -484,7 +484,7 @@
                   ${otrosGrupos.map(og => `<option value="${og.id}">${og.nombre}</option>`).join('')}
                 </select>` : ''}
             </div>`).join('')
-        : '<div style="color:var(--muted);font-size:12px;padding:4px 0">Sin disc√≠pulos</div>';
+        : '<div style="color:var(--muted);font-size:12px;padding:4px 0">Sin discÌpulos</div>';
 
       const diasOpts = DIAS_ADMIN.map(d => `<option${g.dia===d?' selected':''}>${d}</option>`).join('');
 
@@ -496,8 +496,8 @@
               ${info ? `<div style="font-size:10px;color:var(--muted);margin-top:2px">${info}</div>` : ''}
             </div>
             <div style="display:flex;gap:4px">
-              <button class="action-btn edit" style="font-size:12px" onclick="iniciarRenombrar(${g.id})">‚úè Editar</button>
-              <button class="action-btn" style="font-size:12px" onclick="confirmarDesactivarGrupo(${g.id})">‚úó</button>
+              <button class="action-btn edit" style="font-size:12px" onclick="iniciarRenombrar(${g.id})">? Editar</button>
+              <button class="action-btn" style="font-size:12px" onclick="confirmarDesactivarGrupo(${g.id})">?</button>
             </div>
           </div>
           <div id="grename-${g.id}" style="display:none;margin-bottom:8px">
@@ -505,7 +505,7 @@
               <input type="text" id="ri-n-${g.id}" class="mini-input" value="${g.nombre}" placeholder="Nombre del GC">
               <div style="display:flex;gap:6px">
                 <select id="ri-d-${g.id}" class="mini-input" style="flex:1">
-                  <option value="">D√≠a...</option>${diasOpts}
+                  <option value="">DÌa...</option>${diasOpts}
                 </select>
                 <input type="time" id="ri-h-${g.id}" class="mini-input" style="flex:0 0 auto;width:100px" value="${g.horario||''}">
               </div>
@@ -528,7 +528,7 @@
               <div id="addmsg-${g.id}" class="msg" style="margin-top:0"></div>
             </div>
           </div>
-          <button class="action-btn edit" style="width:100%;text-align:center;font-size:12px" onclick="toggleAddDiscForm(${g.id})">+ Agregar disc√≠pulo</button>
+          <button class="action-btn edit" style="width:100%;text-align:center;font-size:12px" onclick="toggleAddDiscForm(${g.id})">+ Agregar discÌpulo</button>
         </div>`;
     }).join('');
   }
@@ -565,7 +565,7 @@
 
   async function confirmarDesactivarGrupo(grupoId) {
     const g = gruposData.find(g => g.id === grupoId);
-    if (!confirm(`¬øDesactivar "${g?.nombre}"?`)) return;
+    if (!confirm(`øDesactivar "${g?.nombre}"?`)) return;
     try {
       await fetch(`${API_URL}/grupos/${grupoId}/activo`, {
         method: 'PATCH',
@@ -582,7 +582,7 @@
     const horario = document.getElementById('ngHorario').value;
     const lugar = document.getElementById('ngLugar').value.trim();
     const msg = document.getElementById('ngMsg');
-    if (!nombre) { msg.textContent = 'Ingres√° un nombre'; msg.className = 'msg err'; return; }
+    if (!nombre) { msg.textContent = 'Ingres· un nombre'; msg.className = 'msg err'; return; }
     try {
       const res = await fetch(`${API_URL}/grupos`, {
         method: 'POST',
@@ -597,7 +597,7 @@
         const d = await res.json();
         msg.textContent = d.error || 'Error'; msg.className = 'msg err';
       }
-    } catch (err) { msg.textContent = 'Error de conexi√≥n'; msg.className = 'msg err'; }
+    } catch (err) { msg.textContent = 'Error de conexiÛn'; msg.className = 'msg err'; }
   }
 
   function toggleAddDiscForm(grupoId) {
@@ -620,12 +620,12 @@
       const data = await res.json();
       if (!res.ok) { msg.textContent = data.error || 'Error'; msg.className = 'msg err'; }
       else {
-        msg.textContent = '‚úì Disc√≠pulo agregado'; msg.className = 'msg ok';
+        msg.textContent = '? DiscÌpulo agregado'; msg.className = 'msg ok';
         document.getElementById(`adname-${grupoId}`).value = '';
         document.getElementById(`adcel-${grupoId}`).value = '';
         loadGrupos();
       }
-    } catch (err) { msg.textContent = 'Error de conexi√≥n'; msg.className = 'msg err'; }
+    } catch (err) { msg.textContent = 'Error de conexiÛn'; msg.className = 'msg err'; }
   }
 
   async function moverDiscipulo(discId, nuevoGrupoId, grupoActualId, selectEl) {
@@ -640,8 +640,8 @@
         body: JSON.stringify({ lider_id: gruposLiderId, nombre: disc.nombre, celular: disc.celular || '', grupo_id: parseInt(nuevoGrupoId) })
       });
       if (res.ok) loadGrupos();
-      else { selectEl.value = ''; alert('Error al mover disc√≠pulo'); }
-    } catch (err) { selectEl.value = ''; alert('Error de conexi√≥n'); }
+      else { selectEl.value = ''; alert('Error al mover discÌpulo'); }
+    } catch (err) { selectEl.value = ''; alert('Error de conexiÛn'); }
   }
 </script>
 </body>

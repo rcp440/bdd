@@ -1,9 +1,9 @@
-Ôªø<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Estad√≠sticas - Asistencia</title>
+  <title>EstadÌsticas - Asistencia</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
@@ -67,8 +67,8 @@
 <div class="app">
   <div class="header">
     <div class="header-top">
-      <h1>Estad√≠sticas</h1>
-      <button class="back-btn" onclick="window.location.href='app.html'">‚Üê Volver</button>
+      <h1>EstadÌsticas</h1>
+      <button class="back-btn" onclick="window.location.href='app.html'">? Volver</button>
     </div>
     <div class="tabs">
       <button class="tab-btn active" id="tabBtnM" onclick="switchTab('mensual')">Mensual</button>
@@ -80,10 +80,10 @@
   <!-- Tab Mensual -->
   <div id="tabMensual">
     <div class="filters">
-      <select id="selectLiderM" onchange="loadGruposM()"><option value="">-- Seleccionar l√≠der --</option></select>
+      <select id="selectLiderM" onchange="loadGruposM()"><option value="">-- Seleccionar lÌder --</option></select>
       <select id="selectGrupoM"><option value="">-- Seleccionar GC --</option></select>
       <input type="month" id="selectMes">
-      <button class="gen-btn" id="btnGenM" onclick="generarMensual()">Generar estad√≠stica</button>
+      <button class="gen-btn" id="btnGenM" onclick="generarMensual()">Generar estadÌstica</button>
     </div>
     <div id="resultMensual"></div>
     <button id="btnPdfM" class="pdf-btn" style="display:none" onclick="pdfMensual()">Descargar PDF mensual</button>
@@ -92,7 +92,7 @@
   <!-- Tab Por persona -->
   <div id="tabPersona" style="display:none">
     <div class="filters">
-      <select id="selectLiderP" onchange="loadDiscipulosP()"><option value="">-- Seleccionar l√≠der --</option></select>
+      <select id="selectLiderP" onchange="loadDiscipulosP()"><option value="">-- Seleccionar lÌder --</option></select>
       <select id="selectDisc"><option value="">-- Seleccionar persona --</option></select>
       <div class="date-row">
         <div>
@@ -113,7 +113,7 @@
   <!-- Tab Entrevistas -->
   <div id="tabEntrevistas" style="display:none">
     <div class="filters">
-      <select id="selectLiderE"><option value="">Todos los l√≠deres</option></select>
+      <select id="selectLiderE"><option value="">Todos los lÌderes</option></select>
       <div class="date-row">
         <div>
           <label>Desde</label>
@@ -134,7 +134,7 @@
 <div id="printReport"></div>
 
 <script>
-  const API_URL = 'https://resist-turn-condition-patterns.trycloudflare.com/api';
+  const API_URL = 'https://candidate-awareness-building-steps.trycloudflare.com/api';
   const lider = JSON.parse(sessionStorage.getItem('lider'));
 
   if (!lider || (lider.rol !== 'admin' && lider.rol !== 'pastoral')) {
@@ -178,10 +178,10 @@
       const opts = (data.lideres || []).filter(l => l.activo)
         .map(l => `<option value="${l.id}">${l.nombre}</option>`).join('');
       ['selectLiderM', 'selectLiderP'].forEach(id => {
-        document.getElementById(id).innerHTML = '<option value="">-- Seleccionar l√≠der --</option>' + opts;
+        document.getElementById(id).innerHTML = '<option value="">-- Seleccionar lÌder --</option>' + opts;
       });
       document.getElementById('selectLiderE').innerHTML =
-        '<option value="">Todos los l√≠deres</option>' + opts;
+        '<option value="">Todos los lÌderes</option>' + opts;
     } catch (err) {}
   }
 
@@ -253,7 +253,7 @@
     const result = document.getElementById('resultMensual');
 
     if (!grupoId || !mes) {
-      result.innerHTML = '<div class="empty">Seleccion√° un GC y mes</div>';
+      result.innerHTML = '<div class="empty">Seleccion· un GC y mes</div>';
       return;
     }
 
@@ -274,10 +274,10 @@
       renderMensual(data, anio, mesNum);
       document.getElementById('btnPdfM').style.display = 'block';
     } catch (err) {
-      result.innerHTML = '<div class="empty">Error de conexi√≥n</div>';
+      result.innerHTML = '<div class="empty">Error de conexiÛn</div>';
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Generar estad√≠stica';
+      btn.textContent = 'Generar estadÌstica';
     }
   }
 
@@ -296,8 +296,8 @@
       const cells = fechas.map(f => {
         const v = d.fechas[f];
         if (v === undefined || v === null) return `<td class="cell-none">-</td>`;
-        if (v === true || v === 1) return `<td class="cell-p">‚úì</td>`;
-        return `<td class="cell-a">‚úó</td>`;
+        if (v === true || v === 1) return `<td class="cell-p">?</td>`;
+        return `<td class="cell-a">?</td>`;
       }).join('');
       const total = Object.keys(d.fechas).length;
       const pres = Object.values(d.fechas).filter(v => v === true || v === 1).length;
@@ -316,7 +316,7 @@
       </div>` : '';
 
     result.innerHTML = `
-      <div class="section-label">${gt?.lider_nombre} ¬∑ ${gt?.grupo_nombre} ‚Äî ${mesNombre(anio, mesNum)}</div>
+      <div class="section-label">${gt?.lider_nombre} ∑ ${gt?.grupo_nombre} ó ${mesNombre(anio, mesNum)}</div>
       <div class="table-wrap">
         <table>
           <thead><tr><th class="th-name">Nombre</th>${headers}<th>Total</th></tr></thead>
@@ -354,7 +354,7 @@
       renderPersona(data, desde, hasta);
       document.getElementById('btnPdfP').style.display = 'block';
     } catch (err) {
-      result.innerHTML = '<div class="empty">Error de conexi√≥n</div>';
+      result.innerHTML = '<div class="empty">Error de conexiÛn</div>';
     } finally {
       btn.disabled = false;
       btn.textContent = 'Buscar';
@@ -375,18 +375,18 @@
       const presente = r.presente === true || r.presente === 1;
       return `<div class="record-row">
         <div class="record-date">${fmtShort(f)}</div>
-        <div class="record-status" style="color:${presente ? 'var(--green)' : 'var(--red)'}">${presente ? '‚úì Presente' : '‚úó Ausente'}</div>
+        <div class="record-status" style="color:${presente ? 'var(--green)' : 'var(--red)'}">${presente ? '? Presente' : '? Ausente'}</div>
         <div class="record-obs">${r.observacion || ''}</div>
       </div>`;
-    }).join('') : '<div class="empty" style="padding:16px">Sin registros en este per√≠odo</div>';
+    }).join('') : '<div class="empty" style="padding:16px">Sin registros en este perÌodo</div>';
 
     result.innerHTML = `
       <div class="summary-card">
         <div class="person-name">${discipulo.nombre}</div>
-        <div class="person-sub">L√≠der: ${discipulo.lider_nombre}${discipulo.celular ? ' ¬∑ ' + discipulo.celular : ''}</div>
-        <div class="person-sub">Per√≠odo: ${fmtShort(desde)} al ${fmtShort(hasta)}</div>
+        <div class="person-sub">LÌder: ${discipulo.lider_nombre}${discipulo.celular ? ' ∑ ' + discipulo.celular : ''}</div>
+        <div class="person-sub">PerÌodo: ${fmtShort(desde)} al ${fmtShort(hasta)}</div>
         <div class="person-stat">
-          Asisti√≥ <strong>${presentes}</strong> de <strong>${total}</strong> reuniones
+          AsistiÛ <strong>${presentes}</strong> de <strong>${total}</strong> reuniones
           <span style="color:${pctColor};font-weight:600"> (${pct}%)</span>
         </div>
       </div>
@@ -397,7 +397,7 @@
     if (!lastMensualData) return;
     const { data, anio, mesNum } = lastMensualData;
     const { asistencia, reuniones, grupo: gt } = data;
-    const lt = gt ? { nombre: `${gt.lider_nombre} ¬∑ ${gt.grupo_nombre}` } : { nombre: '' };
+    const lt = gt ? { nombre: `${gt.lider_nombre} ∑ ${gt.grupo_nombre}` } : { nombre: '' };
     const { fechas, disciples } = buildMatrix(asistencia);
 
     const reunionesConObs = (reuniones || []).filter(r => r.observacion && r.observacion.trim());
@@ -410,8 +410,8 @@
       const cells = fechas.map(f => {
         const v = d.fechas[f];
         let txt = '-', color = '#aaa';
-        if (v === true || v === 1) { txt = '‚úì'; color = '#1D9E75'; }
-        else if (v === false || v === 0) { txt = '‚úó'; color = '#D04030'; }
+        if (v === true || v === 1) { txt = '?'; color = '#1D9E75'; }
+        else if (v === false || v === 0) { txt = '?'; color = '#D04030'; }
         return `<td style="padding:5px 6px;border:1px solid #ddd;text-align:center;color:${color};font-weight:600;font-size:12px">${txt}</td>`;
       }).join('');
       const total = Object.keys(d.fechas).length;
@@ -437,8 +437,8 @@
     report.innerHTML = `
       <div style="font-family:Arial,sans-serif;padding:20px">
         <div style="text-align:center;border-bottom:3px solid #5B4FD4;padding-bottom:12px;margin-bottom:16px">
-          <h1 style="color:#5B4FD4;font-size:18px;margin:0 0 4px">Estad√≠stica Mensual de Asistencia</h1>
-          <p style="margin:0;color:#444;font-size:12px">L√≠der: ${lt?.nombre} | ${mesNombre(anio, mesNum)}</p>
+          <h1 style="color:#5B4FD4;font-size:18px;margin:0 0 4px">EstadÌstica Mensual de Asistencia</h1>
+          <p style="margin:0;color:#444;font-size:12px">LÌder: ${lt?.nombre} | ${mesNombre(anio, mesNum)}</p>
         </div>
         <table style="border-collapse:collapse;width:100%">
           <thead>
@@ -490,10 +490,10 @@
     report.innerHTML = `
       <div style="font-family:Arial,sans-serif;padding:24px;max-width:700px;margin:0 auto">
         <div style="text-align:center;border-bottom:3px solid #5B4FD4;padding-bottom:14px;margin-bottom:20px">
-          <h1 style="color:#5B4FD4;font-size:20px;margin:0 0 4px">Estad√≠stica por Persona</h1>
+          <h1 style="color:#5B4FD4;font-size:20px;margin:0 0 4px">EstadÌstica por Persona</h1>
           <p style="margin:0;color:#444;font-size:14px;font-weight:600">${discipulo.nombre}</p>
-          <p style="margin:4px 0 0;color:#666;font-size:12px">L√≠der: ${discipulo.lider_nombre}${discipulo.celular ? ' ¬∑ ' + discipulo.celular : ''}</p>
-          <p style="margin:2px 0 0;color:#666;font-size:12px">Per√≠odo: ${fmtShort(desde)} al ${fmtShort(hasta)}</p>
+          <p style="margin:4px 0 0;color:#666;font-size:12px">LÌder: ${discipulo.lider_nombre}${discipulo.celular ? ' ∑ ' + discipulo.celular : ''}</p>
+          <p style="margin:2px 0 0;color:#666;font-size:12px">PerÌodo: ${fmtShort(desde)} al ${fmtShort(hasta)}</p>
         </div>
         <div style="display:flex;gap:12px;margin-bottom:20px;text-align:center">
           <div style="flex:1;border:1px solid #ccc;border-radius:8px;padding:10px">
@@ -515,11 +515,11 @@
             <tr style="background:#f5f4f0;border-bottom:2px solid #5B4FD4">
               <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600">Fecha</th>
               <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600">Estado</th>
-              <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600">Observaci√≥n</th>
+              <th style="padding:8px 10px;text-align:left;font-size:11px;font-weight:600">ObservaciÛn</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
-        </table>` : '<p style="text-align:center;color:#888">Sin registros en este per√≠odo</p>'}
+        </table>` : '<p style="text-align:center;color:#888">Sin registros en este perÌodo</p>'}
       </div>`;
 
     report.style.display = 'block';
@@ -544,7 +544,7 @@
     const result  = document.getElementById('resultEntrevistas');
 
     if (!desdeE || !hastaE) {
-      result.innerHTML = '<div class="empty">Complet√° las fechas</div>';
+      result.innerHTML = '<div class="empty">Complet· las fechas</div>';
       return;
     }
 
@@ -563,7 +563,7 @@
       renderEntrevistas(data.entrevistas || [], desdeE, hastaE);
       document.getElementById('btnPdfE').style.display = 'block';
     } catch (err) {
-      result.innerHTML = '<div class="empty">Error de conexi√≥n</div>';
+      result.innerHTML = '<div class="empty">Error de conexiÛn</div>';
     } finally {
       btn.disabled = false;
       btn.textContent = 'Generar informe';
@@ -573,17 +573,17 @@
   function renderEntrevistas(rows, desdeE, hastaE) {
     const result = document.getElementById('resultEntrevistas');
     if (!rows.length) {
-      result.innerHTML = '<div class="empty">Sin entrevistas en ese per√≠odo</div>';
+      result.innerHTML = '<div class="empty">Sin entrevistas en ese perÌodo</div>';
       return;
     }
     const filas = rows.map(e => {
-      const meta = [e.horario, e.lugar].filter(Boolean).join(' ¬∑ ');
+      const meta = [e.horario, e.lugar].filter(Boolean).join(' ∑ ');
       return `
         <div class="obs-card" style="margin-bottom:8px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:4px">
             <div>
               <div style="font-size:13px;font-weight:600;color:var(--text)">${e.discipulo}</div>
-              <div style="font-size:11px;color:var(--muted)">${e.lider}${e.gc ? ' ¬∑ ' + e.gc : ''}</div>
+              <div style="font-size:11px;color:var(--muted)">${e.lider}${e.gc ? ' ∑ ' + e.gc : ''}</div>
             </div>
             <div style="text-align:right">
               <div class="obs-date">${fmtShort(e.fecha)}</div>
@@ -596,7 +596,7 @@
     }).join('');
     result.innerHTML = `
       <div class="section-label" style="padding-left:0;margin:0 20px 8px">
-        ${rows.length} entrevista${rows.length !== 1 ? 's' : ''} ‚Äî ${fmtShort(desdeE)} al ${fmtShort(hastaE)}
+        ${rows.length} entrevista${rows.length !== 1 ? 's' : ''} ó ${fmtShort(desdeE)} al ${fmtShort(hastaE)}
       </div>
       <div class="obs-list">${filas}</div>`;
   }
@@ -606,14 +606,14 @@
     const { data, desdeE, hastaE } = lastEntrevistasData;
     const rows = data.entrevistas || [];
     const tarjetas = rows.map(e => {
-      const meta = [e.horario, e.lugar].filter(Boolean).join(' ¬∑ ');
+      const meta = [e.horario, e.lugar].filter(Boolean).join(' ∑ ');
       const temas = e.temas ? e.temas.replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
       return `
         <div style="border:1px solid #ddd;border-radius:6px;padding:10px 12px;margin-bottom:8px;page-break-inside:avoid">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:${temas ? '8px' : '0'}">
             <div style="flex:1">
               <div style="font-size:13px;font-weight:600;color:#1a1a1a">${e.discipulo}</div>
-              <div style="font-size:11px;color:#666;margin-top:2px">${e.lider}${e.gc ? ' ¬∑ ' + e.gc : ''}</div>
+              <div style="font-size:11px;color:#666;margin-top:2px">${e.lider}${e.gc ? ' ∑ ' + e.gc : ''}</div>
             </div>
             <div style="text-align:right;flex-shrink:0">
               <div style="font-size:11px;font-weight:600;color:#5B4FD4;text-transform:uppercase">${fmtShort(e.fecha)}</div>
@@ -628,7 +628,7 @@
       <div style="font-family:Arial,sans-serif;padding:20px;width:900px">
         <div style="text-align:center;border-bottom:3px solid #5B4FD4;padding-bottom:12px;margin-bottom:16px">
           <h1 style="color:#5B4FD4;font-size:18px;margin:0 0 4px">Informe de Entrevistas</h1>
-          <p style="margin:0;color:#444;font-size:12px">Per√≠odo: ${fmtShort(desdeE)} al ${fmtShort(hastaE)} ¬∑ ${rows.length} entrevista${rows.length !== 1 ? 's' : ''}</p>
+          <p style="margin:0;color:#444;font-size:12px">PerÌodo: ${fmtShort(desdeE)} al ${fmtShort(hastaE)} ∑ ${rows.length} entrevista${rows.length !== 1 ? 's' : ''}</p>
         </div>
         ${tarjetas}
       </div>`;

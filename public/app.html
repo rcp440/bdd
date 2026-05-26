@@ -1,4 +1,4 @@
-Ôªø<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -96,11 +96,11 @@
     .empty { text-align: center; padding: 32px 20px; color: var(--muted); font-size: 14px; }
     #printReport { display: none; }
 
-    /* OBSERVACI√ìN DEL ENCUENTRO */
+    /* OBSERVACI”N DEL ENCUENTRO */
     .reunion-obs { width: 100%; border: none; border-top: 1px solid var(--border); background: transparent; font-size: 12px; font-family: 'DM Sans', sans-serif; color: var(--text); padding: 6px 0 2px; outline: none; resize: none; margin-top: 6px; min-height: 32px; }
     .reunion-obs::placeholder { color: var(--muted); font-style: italic; }
 
-    /* MODAL EDITAR DISC√çPULO */
+    /* MODAL EDITAR DISCÕPULO */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
     .modal-overlay.open { display: flex; }
     .modal { background: var(--card); border-radius: var(--radius); padding: 20px; width: 100%; max-width: 380px; }
@@ -126,7 +126,7 @@
     .grupo-list { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 10px; }
     .grupo-btn { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; font-size: 15px; font-weight: 600; font-family: 'DM Sans', sans-serif; color: var(--text); cursor: pointer; text-align: left; transition: border-color 0.15s, background 0.15s; }
     .grupo-btn:hover { border-color: var(--purple); background: var(--purple-bg); color: var(--purple); }
-    /* GESTI√ìN DE GRUPOS (modal) */
+    /* GESTI”N DE GRUPOS (modal) */
     .gcard { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 8px; }
     .gcard-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
     .gcard-nombre { font-size: 13px; font-weight: 600; color: var(--purple); }
@@ -159,13 +159,13 @@
   <div class="header">
     <div class="header-top">
       <div>
-        <h1>Asistencia <span>¬∑</span> GC</h1>
+        <h1>Asistencia <span>∑</span> GC</h1>
         <div class="header-info" id="headerInfo"></div>
         <div class="date-pill-wrap" id="datePillWrap">
           <div class="date-pill" id="date-pill"></div>
           <input type="date" id="date-input" />
         </div>
-        <textarea id="reunionObs" class="reunion-obs" placeholder="Observaci√≥n del encuentro..." maxlength="500" rows="2"></textarea>
+        <textarea id="reunionObs" class="reunion-obs" placeholder="ObservaciÛn del encuentro..." maxlength="500" rows="2"></textarea>
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
         <button class="logout-btn" onclick="logout()">Salir</button>
@@ -181,29 +181,29 @@
   </div>
 
   <div class="list-header">
-    <span>Disc√≠pulos</span>
+    <span>DiscÌpulos</span>
     <div style="display:flex;gap:10px;align-items:center;">
       <button class="nav-btn" onclick="openGruposModal()">GC</button>
       <button class="nav-btn" onclick="openAddDiscModal()">+ Agregar</button>
-      <button onclick="descargarCSV()" title="Descargar CSV" style="font-size:12px;color:var(--green);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;">‚¨á CSV</button>
-      <button onclick="imprimirPDF()" title="Informe PDF" style="font-size:12px;color:var(--purple);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;">‚¨á PDF</button>
+      <button onclick="descargarCSV()" title="Descargar CSV" style="font-size:12px;color:var(--green);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;">? CSV</button>
+      <button onclick="imprimirPDF()" title="Informe PDF" style="font-size:12px;color:var(--purple);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:500;">? PDF</button>
       <button id="toggleAllBtn" onclick="toggleAll()">Marcar todos</button>
     </div>
   </div>
   <div class="dia-alert" id="diaAlert">
-    <button class="dia-alert-close" onclick="document.getElementById('diaAlert').style.display='none'">√ó</button>
+    <button class="dia-alert-close" onclick="document.getElementById('diaAlert').style.display='none'">◊</button>
     <div class="dia-alert-text" id="diaAlertText"></div>
   </div>
   <div class="list" id="list"></div>
 </div>
 
 <div class="add-section">
-  <button class="save-btn" id="saveBtn" onclick="guardar()"><span class="icon">üíæ</span> Guardar asistencia</button>
+  <button class="save-btn" id="saveBtn" onclick="guardar()"><span class="icon">??</span> Guardar asistencia</button>
 </div>
 
 <div id="grupoSelector" class="grupo-selector" style="display:none">
   <h2 id="gsLiderNombre"></h2>
-  <p>Seleccion√° el GC con el que vas a trabajar hoy</p>
+  <p>Seleccion· el GC con el que vas a trabajar hoy</p>
   <div class="grupo-list" id="gsGrupos"></div>
 </div>
 
@@ -213,14 +213,14 @@
 <div class="modal-overlay" id="modalBuscarDisc" onclick="if(event.target===this)closeBuscarDiscModal()">
   <div class="modal" style="max-width:440px">
     <div class="modal-header">
-      <span class="modal-title">Buscar disc√≠pulo</span>
-      <button class="modal-close" onclick="closeBuscarDiscModal()">√ó</button>
+      <span class="modal-title">Buscar discÌpulo</span>
+      <button class="modal-close" onclick="closeBuscarDiscModal()">◊</button>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
       <select id="buscarLiderSelect" class="mini-inp" onchange="buscarDiscFiltrar()">
-        <option value="">Todos los l√≠deres</option>
+        <option value="">Todos los lÌderes</option>
       </select>
-      <input type="text" id="buscarDiscInput" class="mini-inp" placeholder="Nombre (opcional si elegiste l√≠der)..." oninput="buscarDiscFiltrar()">
+      <input type="text" id="buscarDiscInput" class="mini-inp" placeholder="Nombre (opcional si elegiste lÌder)..." oninput="buscarDiscFiltrar()">
     </div>
     <div id="buscarDiscResults" style="border:1px solid var(--border);border-radius:var(--radius-sm);max-height:320px;overflow-y:auto;min-height:48px"></div>
   </div>
@@ -230,7 +230,7 @@
   <div class="modal" style="max-width:480px;max-height:85vh;overflow-y:auto">
     <div class="modal-header">
       <span class="modal-title" id="entrevistaNombre">Entrevistas</span>
-      <button class="modal-close" onclick="closeEntrevistaModal()">√ó</button>
+      <button class="modal-close" onclick="closeEntrevistaModal()">◊</button>
     </div>
     <div id="entrevistaList"><div style="text-align:center;padding:16px;color:var(--muted)">Cargando...</div></div>
     <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
@@ -258,7 +258,7 @@
   <div class="modal" style="max-width:420px;max-height:85vh;overflow-y:auto">
     <div class="modal-header">
       <span class="modal-title">Mis GC</span>
-      <button class="modal-close" onclick="closeGruposModal()">√ó</button>
+      <button class="modal-close" onclick="closeGruposModal()">◊</button>
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
       <span style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">GC</span>
@@ -269,9 +269,9 @@
         <input type="text" id="ngNombreApp" class="mini-inp" placeholder="Nombre del GC">
         <div style="display:flex;gap:6px">
           <select id="ngDiaApp" class="mini-inp" style="flex:1">
-            <option value="">D√≠a...</option>
-            <option>Lunes</option><option>Martes</option><option>Mi√©rcoles</option>
-            <option>Jueves</option><option>Viernes</option><option>S√°bado</option><option>Domingo</option>
+            <option value="">DÌa...</option>
+            <option>Lunes</option><option>Martes</option><option>MiÈrcoles</option>
+            <option>Jueves</option><option>Viernes</option><option>S·bado</option><option>Domingo</option>
           </select>
           <input type="time" id="ngHorarioApp" class="mini-inp" style="flex:0 0 auto;width:100px">
         </div>
@@ -290,8 +290,8 @@
 <div class="modal-overlay" id="modalAddDisc" onclick="if(event.target===this)closeAddDiscModal()">
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-title">Agregar disc√≠pulo</span>
-      <button class="modal-close" onclick="closeAddDiscModal()">√ó</button>
+      <span class="modal-title">Agregar discÌpulo</span>
+      <button class="modal-close" onclick="closeAddDiscModal()">◊</button>
     </div>
     <div class="modal-fg">
       <label>Nombre y apellido</label>
@@ -305,7 +305,7 @@
       <label>Fecha de nacimiento</label>
       <input type="date" id="nFechaNac">
     </div>
-    <button class="modal-save-btn" onclick="addPerson()">+ Agregar disc√≠pulo</button>
+    <button class="modal-save-btn" onclick="addPerson()">+ Agregar discÌpulo</button>
   </div>
 </div>
 
@@ -313,7 +313,7 @@
   <div class="modal">
     <div class="modal-header">
       <span class="modal-title">Mi perfil</span>
-      <button class="modal-close" onclick="closePerfilModal()">√ó</button>
+      <button class="modal-close" onclick="closePerfilModal()">◊</button>
     </div>
     <div class="modal-fg">
       <label>Nombre completo</label>
@@ -339,8 +339,8 @@
 <div class="modal-overlay" id="modalEditDisc" onclick="if(event.target===this)closeEditDiscModal()">
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-title">Editar disc√≠pulo</span>
-      <button class="modal-close" onclick="closeEditDiscModal()">√ó</button>
+      <span class="modal-title">Editar discÌpulo</span>
+      <button class="modal-close" onclick="closeEditDiscModal()">◊</button>
     </div>
     <div class="modal-fg">
       <label>Nombre completo</label>
@@ -361,7 +361,7 @@
 </div>
 
 <script>
-  const API_URL = 'https://resist-turn-condition-patterns.trycloudflare.com/api';
+  const API_URL = 'https://candidate-awareness-building-steps.trycloudflare.com/api';
   let lider = JSON.parse(sessionStorage.getItem('lider'));
   let grupo = JSON.parse(sessionStorage.getItem('grupo'));
   let grupos = JSON.parse(sessionStorage.getItem('grupos')) || [];
@@ -382,13 +382,13 @@
   if (lider.rol === 'admin') {
     const nav = document.getElementById('adminNav');
     nav.style.display = 'flex';
-    nav.innerHTML = '<a href="stats.html" class="nav-btn">Estad√≠sticas</a><a href="admin.html" class="nav-btn">Admin</a>';
+    nav.innerHTML = '<a href="stats.html" class="nav-btn">EstadÌsticas</a><a href="admin.html" class="nav-btn">Admin</a>';
   }
 
   if (lider.rol === 'pastoral' || lider.rol === 'admin') {
     const btn = document.createElement('button');
     btn.className = 'nav-btn';
-    btn.textContent = 'üîç Pastoral';
+    btn.textContent = '?? Pastoral';
     btn.onclick = openBuscarDiscModal;
     document.querySelector('.list-header div').prepend(btn);
   }
@@ -397,7 +397,7 @@
     document.getElementById('gsLiderNombre').textContent = lider.nombre;
     const lista = document.getElementById('gsGrupos');
     lista.innerHTML = grupos.map(g => {
-      const info = [g.dia, g.horario, g.lugar].filter(Boolean).join(' ¬∑ ');
+      const info = [g.dia, g.horario, g.lugar].filter(Boolean).join(' ∑ ');
       return `<button class="grupo-btn" onclick="elegirGrupo(${g.id})">
         <div>${g.nombre}</div>
         ${info ? `<div style="font-size:11px;color:var(--muted);margin-top:3px;font-weight:400">${info}</div>` : ''}
@@ -507,12 +507,12 @@
 
   function render() {
     const grupoLink = grupos.length > 1
-      ? ` ¬∑ <button class="lider-name-btn" onclick="showGrupoSelector()" title="Cambiar grupo">${grupo?.nombre || ''}</button>`
-      : (grupo ? ` ¬∑ ${grupo.nombre}` : '');
-    document.getElementById('headerInfo').innerHTML = `<button class="lider-name-btn" onclick="openPerfilModal()">${lider.nombre}</button>${grupoLink} ‚Ä¢ ${people.length} disc√≠pulos`;
+      ? ` ∑ <button class="lider-name-btn" onclick="showGrupoSelector()" title="Cambiar grupo">${grupo?.nombre || ''}</button>`
+      : (grupo ? ` ∑ ${grupo.nombre}` : '');
+    document.getElementById('headerInfo').innerHTML = `<button class="lider-name-btn" onclick="openPerfilModal()">${lider.nombre}</button>${grupoLink} ï ${people.length} discÌpulos`;
     const list = document.getElementById('list');
     if (!people.length) {
-      list.innerHTML = '<div class="empty">üìã No hay disc√≠pulos agregados</div>';
+      list.innerHTML = '<div class="empty">?? No hay discÌpulos agregados</div>';
       document.getElementById('sTotal').textContent = '0';
       document.getElementById('sPres').textContent = '0';
       document.getElementById('sAus').textContent = '0';
@@ -533,15 +533,15 @@
         <div class="info">
           <div class="name">${p.name}</div>
           <input class="phone-input" type="tel" value="${p.phone}" placeholder="Celular" onchange="people[${i}].phone = this.value" />
-          ${p.fnac ? `<div style="font-size:10px;color:var(--muted);margin-top:1px">üéÇ ${fmtFecha(p.fnac)}</div>` : ''}
-          <div class="status-txt">${p.status === 'p' ? '‚úì Presente' : '‚úó Ausente'}</div>
-          <input class="obs-input" type="text" value="${p.obs}" placeholder="Observaci√≥n" onchange="people[${i}].obs = this.value" />
+          ${p.fnac ? `<div style="font-size:10px;color:var(--muted);margin-top:1px">?? ${fmtFecha(p.fnac)}</div>` : ''}
+          <div class="status-txt">${p.status === 'p' ? '? Presente' : '? Ausente'}</div>
+          <input class="obs-input" type="text" value="${p.obs}" placeholder="ObservaciÛn" onchange="people[${i}].obs = this.value" />
         </div>
         <div class="btns">
-          <button class="bp ${p.status === 'p' ? 'on' : ''}" onclick="people[${i}].status = 'p'; render()">‚úì</button>
-          <button class="ba ${p.status === 'a' ? 'on' : ''}" onclick="people[${i}].status = 'a'; render()">‚úó</button>
-          <button class="edit-disc-btn" onclick="openEditDisc(${i})">‚úè</button>
-          ${p.id ? `<button class="edit-disc-btn" title="Entrevistas" onclick="openEntrevistaModal(${p.id},'${p.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">üìã</button>` : ''}
+          <button class="bp ${p.status === 'p' ? 'on' : ''}" onclick="people[${i}].status = 'p'; render()">?</button>
+          <button class="ba ${p.status === 'a' ? 'on' : ''}" onclick="people[${i}].status = 'a'; render()">?</button>
+          <button class="edit-disc-btn" onclick="openEditDisc(${i})">?</button>
+          ${p.id ? `<button class="edit-disc-btn" title="Entrevistas" onclick="openEntrevistaModal(${p.id},'${p.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">??</button>` : ''}
         </div>
       </div>
     `).join('');
@@ -560,7 +560,7 @@
     people.push({ name: nombre, phone: celular, fnac, obs: '', status: 'a' });
     closeAddDiscModal();
     render();
-    toast('Disc√≠pulo agregado', 'ok');
+    toast('DiscÌpulo agregado', 'ok');
   }
 
   async function guardar() {
@@ -583,7 +583,7 @@
 
         if (!resNew.ok) {
           const errData = await resNew.json().catch(() => null);
-          throw new Error(errData?.error || 'No se pudo crear el disc√≠pulo');
+          throw new Error(errData?.error || 'No se pudo crear el discÌpulo');
         }
 
         const dataNew = await resNew.json();
@@ -614,13 +614,13 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ grupo_id: grupo.id, fecha: selectedDate, observacion: obsReunion })
         });
-        toast('‚úì Asistencia guardada en la BD', 'ok');
+        toast('? Asistencia guardada en la BD', 'ok');
       } else {
         const errData = await res.json().catch(() => null);
         toast(errData?.error ? `Error: ${errData.error}` : 'Error al guardar', 'err');
       }
     } catch (err) {
-      toast(err.message.includes('Error') ? err.message : 'Error de conexi√≥n', 'err');
+      toast(err.message.includes('Error') ? err.message : 'Error de conexiÛn', 'err');
       console.error(err);
     } finally {
       btn.disabled = false;
@@ -640,7 +640,7 @@
     }
 
     const fecha = todayShort();
-    const header = ['Nombre', 'Celular', 'Estado', 'Observaci√≥n'];
+    const header = ['Nombre', 'Celular', 'Estado', 'ObservaciÛn'];
     const rows = people.map(p => [
       p.name,
       p.phone,
@@ -684,7 +684,7 @@
         <div style="text-align:center;border-bottom:3px solid #5B4FD4;padding-bottom:14px;margin-bottom:20px">
           <h1 style="color:#5B4FD4;font-size:22px;margin:0 0 6px">Asistencia al Grupo</h1>
           <p style="margin:0;color:#444;font-size:13px">
-            <strong>Fecha:</strong> ${fecha} | <strong>L√≠der:</strong> ${lider.nombre}
+            <strong>Fecha:</strong> ${fecha} | <strong>LÌder:</strong> ${lider.nombre}
           </p>
         </div>
         <div style="display:flex;gap:12px;margin-bottom:20px;text-align:center">
@@ -708,14 +708,14 @@
               <th style="padding:10px;text-align:left;font-weight:600">Nombre</th>
               <th style="padding:10px;text-align:left;font-weight:600">Celular</th>
               <th style="padding:10px;text-align:left;font-weight:600">Estado</th>
-              <th style="padding:10px;text-align:left;font-weight:600">Observaci√≥n</th>
+              <th style="padding:10px;text-align:left;font-weight:600">ObservaciÛn</th>
             </tr>
           </thead>
           <tbody>${filas}</tbody>
         </table>
         ${obsReunion ? `
         <div style="margin-top:20px;border-top:2px solid #5B4FD4;padding-top:14px">
-          <div style="font-size:11px;font-weight:700;color:#5B4FD4;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">Observaci√≥n del encuentro</div>
+          <div style="font-size:11px;font-weight:700;color:#5B4FD4;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">ObservaciÛn del encuentro</div>
           <p style="font-size:13px;color:#333;margin:0;line-height:1.5">${obsReunion}</p>
         </div>` : ''}
       </div>`;
@@ -743,7 +743,7 @@
   }
 
   function logout() {
-    if (confirm('¬øEst√°s seguro de que deseas salir?')) {
+    if (confirm('øEst·s seguro de que deseas salir?')) {
       const href = instIndex();
       sessionStorage.clear();
       window.location.href = href;
@@ -808,13 +808,13 @@
         lider.celular = celular;
         lider.fecha_nacimiento = fechaNac;
         sessionStorage.setItem('lider', JSON.stringify(lider));
-        msg.textContent = '‚úì Perfil actualizado';
+        msg.textContent = '? Perfil actualizado';
         msg.className = 'modal-msg ok';
         render();
         setTimeout(() => closePerfilModal(), 1000);
       }
     } catch (err) {
-      msg.textContent = 'Error de conexi√≥n';
+      msg.textContent = 'Error de conexiÛn';
       msg.className = 'modal-msg err';
     } finally {
       btn.disabled = false;
@@ -878,13 +878,13 @@
         msg.textContent = data.error || 'Error al guardar';
         msg.className = 'modal-msg err';
       } else {
-        msg.textContent = '‚úì Guardado';
+        msg.textContent = '? Guardado';
         msg.className = 'modal-msg ok';
         render();
         setTimeout(() => closeEditDiscModal(), 1000);
       }
     } catch (err) {
-      msg.textContent = 'Error de conexi√≥n';
+      msg.textContent = 'Error de conexiÛn';
       msg.className = 'modal-msg err';
     } finally {
       btn.disabled = false;
@@ -893,7 +893,7 @@
   }
 
   async function darDeBajaDisc() {
-    if (!confirm('¬øDar de baja este disc√≠pulo?')) return;
+    if (!confirm('øDar de baja este discÌpulo?')) return;
     const p = people[editingDiscIdx];
     if (p.id) {
       try {
@@ -904,17 +904,17 @@
         });
         if (!res.ok) { toast('Error al dar de baja', 'err'); return; }
       } catch (err) {
-        toast('Error de conexi√≥n', 'err');
+        toast('Error de conexiÛn', 'err');
         return;
       }
     }
     people.splice(editingDiscIdx, 1);
     closeEditDiscModal();
     render();
-    toast('Disc√≠pulo dado de baja', 'ok');
+    toast('DiscÌpulo dado de baja', 'ok');
   }
 
-  // ==================== GESTI√ìN DE GRUPOS ====================
+  // ==================== GESTI”N DE GRUPOS ====================
 
   let gruposAppData = [];
   let gruposAppModificados = false;
@@ -953,7 +953,7 @@
       const data = await res.json();
       gruposAppData = data.grupos || [];
       if (!gruposAppData.length) {
-        container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">Sin GC. Cre√° el primero.</div>';
+        container.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:13px">Sin GC. Cre· el primero.</div>';
         return;
       }
       for (const g of gruposAppData) {
@@ -967,14 +967,14 @@
     }
   }
 
-  const DIAS = ['Lunes','Martes','Mi√©rcoles','Jueves','Viernes','S√°bado','Domingo'];
+  const DIAS = ['Lunes','Martes','MiÈrcoles','Jueves','Viernes','S·bado','Domingo'];
 
   function renderGruposApp() {
     const container = document.getElementById('gruposContainerApp');
     container.innerHTML = gruposAppData.map(g => {
       const esCurrent = grupo && grupo.id === g.id;
       const otrosGrupos = gruposAppData.filter(og => og.id !== g.id);
-      const info = [g.dia, g.horario, g.lugar].filter(Boolean).join(' ¬∑ ');
+      const info = [g.dia, g.horario, g.lugar].filter(Boolean).join(' ∑ ');
       const discsHtml = g.discipulos.length
         ? g.discipulos.map(d => `
             <div class="disc-row">
@@ -985,7 +985,7 @@
                   ${otrosGrupos.map(og => `<option value="${og.id}">${og.nombre}</option>`).join('')}
                 </select>` : ''}
             </div>`).join('')
-        : '<div style="color:var(--muted);font-size:12px;padding:4px 0">Sin disc√≠pulos</div>';
+        : '<div style="color:var(--muted);font-size:12px;padding:4px 0">Sin discÌpulos</div>';
 
       const diasOpts = DIAS.map(d => `<option${g.dia===d?' selected':''}>${d}</option>`).join('');
 
@@ -993,13 +993,13 @@
         <div class="gcard">
           <div class="gcard-header">
             <div>
-              <span class="gcard-nombre${esCurrent ? ' activo' : ''}" id="gname-${g.id}">${g.nombre}${esCurrent ? ' ‚úì' : ''}</span>
+              <span class="gcard-nombre${esCurrent ? ' activo' : ''}" id="gname-${g.id}">${g.nombre}${esCurrent ? ' ?' : ''}</span>
               ${info ? `<div style="font-size:10px;color:var(--muted);margin-top:2px">${info}</div>` : ''}
             </div>
             <div style="display:flex;gap:4px">
               ${!esCurrent ? `<button class="mini-btn-g" style="font-size:11px" onclick="elegirGrupo(${g.id})">Ir</button>` : ''}
-              <button class="mini-btn-g" style="font-size:11px" onclick="iniciarRenombrarApp(${g.id})">‚úè</button>
-              ${gruposAppData.length > 1 && !esCurrent ? `<button class="mini-btn-g" style="font-size:11px;color:var(--red)" onclick="desactivarGrupoApp(${g.id})">‚úó</button>` : ''}
+              <button class="mini-btn-g" style="font-size:11px" onclick="iniciarRenombrarApp(${g.id})">?</button>
+              ${gruposAppData.length > 1 && !esCurrent ? `<button class="mini-btn-g" style="font-size:11px;color:var(--red)" onclick="desactivarGrupoApp(${g.id})">?</button>` : ''}
             </div>
           </div>
           <div id="grename-${g.id}" style="display:none;margin-bottom:8px">
@@ -1007,7 +1007,7 @@
               <input type="text" id="ri-n-${g.id}" class="mini-inp" value="${g.nombre}" placeholder="Nombre del GC">
               <div style="display:flex;gap:6px">
                 <select id="ri-d-${g.id}" class="mini-inp" style="flex:1">
-                  <option value="">D√≠a...</option>${diasOpts}
+                  <option value="">DÌa...</option>${diasOpts}
                 </select>
                 <input type="time" id="ri-h-${g.id}" class="mini-inp" style="flex:0 0 auto;width:100px" value="${g.horario||''}">
               </div>
@@ -1030,7 +1030,7 @@
               <div id="addmsg-${g.id}" class="modal-msg" style="margin-top:0"></div>
             </div>
           </div>
-          <button class="mini-btn-g" style="width:100%;text-align:center;font-size:12px;color:var(--purple);border-color:var(--purple-bg);background:var(--purple-bg)" onclick="toggleAddDiscFormApp(${g.id})">+ Agregar disc√≠pulo</button>
+          <button class="mini-btn-g" style="width:100%;text-align:center;font-size:12px;color:var(--purple);border-color:var(--purple-bg);background:var(--purple-bg)" onclick="toggleAddDiscFormApp(${g.id})">+ Agregar discÌpulo</button>
         </div>`;
     }).join('');
   }
@@ -1047,7 +1047,7 @@
     const horario = document.getElementById('ngHorarioApp').value;
     const lugar = document.getElementById('ngLugarApp').value.trim();
     const msg = document.getElementById('ngMsgApp');
-    if (!nombre) { msg.textContent = 'Ingres√° un nombre'; msg.className = 'modal-msg err'; return; }
+    if (!nombre) { msg.textContent = 'Ingres· un nombre'; msg.className = 'modal-msg err'; return; }
     try {
       const res = await fetch(`${API_URL}/grupos`, {
         method: 'POST',
@@ -1063,7 +1063,7 @@
         const d = await res.json();
         msg.textContent = d.error || 'Error'; msg.className = 'modal-msg err';
       }
-    } catch (err) { msg.textContent = 'Error de conexi√≥n'; msg.className = 'modal-msg err'; }
+    } catch (err) { msg.textContent = 'Error de conexiÛn'; msg.className = 'modal-msg err'; }
   }
 
   function iniciarRenombrarApp(grupoId) {
@@ -1105,7 +1105,7 @@
 
   async function desactivarGrupoApp(grupoId) {
     const g = gruposAppData.find(g => g.id === grupoId);
-    if (!confirm(`¬øDesactivar "${g?.nombre}"?`)) return;
+    if (!confirm(`øDesactivar "${g?.nombre}"?`)) return;
     try {
       await fetch(`${API_URL}/grupos/${grupoId}/activo`, {
         method: 'PATCH',
@@ -1138,12 +1138,12 @@
       if (!res.ok) { msg.textContent = data.error || 'Error'; msg.className = 'modal-msg err'; }
       else {
         gruposAppModificados = true;
-        msg.textContent = '‚úì Disc√≠pulo agregado'; msg.className = 'modal-msg ok';
+        msg.textContent = '? DiscÌpulo agregado'; msg.className = 'modal-msg ok';
         document.getElementById(`adname-${grupoId}`).value = '';
         document.getElementById(`adcel-${grupoId}`).value = '';
         loadGruposApp();
       }
-    } catch (err) { msg.textContent = 'Error de conexi√≥n'; msg.className = 'modal-msg err'; }
+    } catch (err) { msg.textContent = 'Error de conexiÛn'; msg.className = 'modal-msg err'; }
   }
 
   async function moverDiscipuloApp(discId, nuevoGrupoId, grupoActualId, selectEl) {
@@ -1159,18 +1159,18 @@
       });
       if (res.ok) { gruposAppModificados = true; loadGruposApp(); }
       else { selectEl.value = ''; toast('Error al mover', 'err'); }
-    } catch (err) { selectEl.value = ''; toast('Error de conexi√≥n', 'err'); }
+    } catch (err) { selectEl.value = ''; toast('Error de conexiÛn', 'err'); }
   }
 
-  // ==================== B√öSQUEDA PASTORAL ====================
+  // ==================== B⁄SQUEDA PASTORAL ====================
 
   async function openBuscarDiscModal() {
     document.getElementById('buscarDiscInput').value = '';
-    document.getElementById('buscarDiscResults').innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:13px">Seleccion√° un l√≠der o escrib√≠ un nombre</div>';
+    document.getElementById('buscarDiscResults').innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:13px">Seleccion· un lÌder o escribÌ un nombre</div>';
     document.getElementById('modalBuscarDisc').classList.add('open');
-    // Cargar lista de l√≠deres en el select
+    // Cargar lista de lÌderes en el select
     const sel = document.getElementById('buscarLiderSelect');
-    sel.innerHTML = '<option value="">Todos los l√≠deres</option>';
+    sel.innerHTML = '<option value="">Todos los lÌderes</option>';
     try {
       const res = await fetch(`${API_URL}/lideres/activos?lider_id=${lider.id}`);
       const data = await res.json();
@@ -1180,7 +1180,7 @@
         opt.textContent = l.nombre;
         sel.appendChild(opt);
       });
-    } catch (e) { /* sin filtro de l√≠der si falla */ }
+    } catch (e) { /* sin filtro de lÌder si falla */ }
     setTimeout(() => document.getElementById('buscarDiscInput').focus(), 50);
   }
 
@@ -1198,7 +1198,7 @@
     const tieneLider   = !!filtroLider;
 
     if (!tieneNombre && !tieneLider) {
-      container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:13px">Seleccion√° un l√≠der o escrib√≠ al menos 2 letras</div>';
+      container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:13px">Seleccion· un lÌder o escribÌ al menos 2 letras</div>';
       return;
     }
     container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:13px">Buscando...</div>';
@@ -1216,7 +1216,7 @@
         container.innerHTML = data.discipulos.map(d => `
           <div class="buscar-disc-result" onclick="seleccionarDiscPastoral(${d.id}, '${d.nombre.replace(/'/g,"\\'")}')">
             <div style="font-size:13px;font-weight:600">${d.nombre}</div>
-            <div style="font-size:11px;color:var(--muted)">${d.lider_nombre} ¬∑ ${d.grupo_nombre || 'Sin GC'}</div>
+            <div style="font-size:11px;color:var(--muted)">${d.lider_nombre} ∑ ${d.grupo_nombre || 'Sin GC'}</div>
           </div>`).join('');
       } catch (err) {
         container.innerHTML = '<div style="padding:12px;text-align:center;color:var(--red);font-size:13px">Error al buscar</div>';
@@ -1229,11 +1229,11 @@
     openEntrevistaModal(discId, nombre, true);
   }
 
-  // ==================== ALERTA D√çA ====================
+  // ==================== ALERTA DÕA ====================
 
   function checkDiaAlert() {
-    const DIAS_NUM = { Lunes:1, Martes:2, 'Mi√©rcoles':3, Jueves:4, Viernes:5, S√°bado:6, Domingo:0 };
-    const DIAS_NOMBRE = ['Domingo','Lunes','Martes','Mi√©rcoles','Jueves','Viernes','S√°bado'];
+    const DIAS_NUM = { Lunes:1, Martes:2, 'MiÈrcoles':3, Jueves:4, Viernes:5, S·bado:6, Domingo:0 };
+    const DIAS_NOMBRE = ['Domingo','Lunes','Martes','MiÈrcoles','Jueves','Viernes','S·bado'];
     const alerta = document.getElementById('diaAlert');
     if (!grupo?.dia) { alerta.style.display = 'none'; return; }
     const [y, m, d] = selectedDate.split('-').map(Number);
@@ -1241,7 +1241,7 @@
     const diaGC = DIAS_NUM[grupo.dia];
     if (diaGC === undefined || diaSel === diaGC) { alerta.style.display = 'none'; return; }
     document.getElementById('diaAlertText').textContent =
-      `‚ö† Hoy es ${DIAS_NOMBRE[diaSel]} ‚Äî tu GC es los ${grupo.dia}. ¬øQuer√©s registrar igual?`;
+      `? Hoy es ${DIAS_NOMBRE[diaSel]} ó tu GC es los ${grupo.dia}. øQuerÈs registrar igual?`;
     alerta.style.display = 'block';
   }
 
@@ -1296,7 +1296,7 @@
       return;
     }
     container.innerHTML = entrevistas.map(e => {
-      const meta = [e.horario, e.lugar].filter(Boolean).join(' ¬∑ ');
+      const meta = [e.horario, e.lugar].filter(Boolean).join(' ∑ ');
       return `
         <div class="entrevista-card">
           <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -1305,7 +1305,7 @@
               ${meta ? `<div class="entrevista-meta">${meta}</div>` : ''}
               ${e.entrevistador ? `<div class="entrevistador-tag">por ${e.entrevistador}</div>` : ''}
             </div>
-            <button class="entrevista-btn" title="Eliminar" onclick="eliminarEntrevista(${e.id})">‚úï</button>
+            <button class="entrevista-btn" title="Eliminar" onclick="eliminarEntrevista(${e.id})">?</button>
           </div>
           ${e.temas ? `<div class="entrevista-temas">${e.temas.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>` : ''}
         </div>`;
@@ -1326,8 +1326,8 @@
     const lugar   = document.getElementById('efLugar').value.trim();
     const temas   = document.getElementById('efTemas').value.trim();
     const msg     = document.getElementById('efMsg');
-    if (!fecha) { msg.textContent = 'Ingres√° la fecha'; msg.className = 'modal-msg err'; return; }
-    if (!temas) { msg.textContent = 'Ingres√° los temas tratados'; msg.className = 'modal-msg err'; return; }
+    if (!fecha) { msg.textContent = 'Ingres· la fecha'; msg.className = 'modal-msg err'; return; }
+    if (!temas) { msg.textContent = 'Ingres· los temas tratados'; msg.className = 'modal-msg err'; return; }
     try {
       const res = await fetch(`${API_URL}/entrevistas`, {
         method: 'POST',
@@ -1347,11 +1347,11 @@
         const d = await res.json();
         msg.textContent = d.error || 'Error'; msg.className = 'modal-msg err';
       }
-    } catch (err) { msg.textContent = 'Error de conexi√≥n'; msg.className = 'modal-msg err'; }
+    } catch (err) { msg.textContent = 'Error de conexiÛn'; msg.className = 'modal-msg err'; }
   }
 
   async function eliminarEntrevista(id) {
-    if (!confirm('¬øEliminar esta entrevista?')) return;
+    if (!confirm('øEliminar esta entrevista?')) return;
     try {
       await fetch(`${API_URL}/entrevistas/${id}`, {
         method: 'DELETE',
