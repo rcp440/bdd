@@ -292,6 +292,22 @@ app.post('/api/registro', async (req, res) => {
 
 // ==================== GRUPOS ====================
 
+// Todos los grupos de la institución (para secretaria/admin)
+app.get('/api/grupos/institucion', async (req, res) => {
+  try {
+    const info = await getLiderInfo(parseInt(req.query.lider_id));
+    if (info.rol !== 'secretaria' && info.rol !== 'admin') return res.status(403).json({ error: 'Sin permisos' });
+    const r = await pool.request()
+      .input('inst_id', sql.Int, info.institucion_id)
+      .query(`SELECT g.id, g.nombre, g.lider_id, l.nombre AS lider_nombre
+              FROM Grupos g
+              JOIN Lideres l ON g.lider_id = l.id
+              WHERE g.institucion_id = @inst_id AND g.activo = 1
+              ORDER BY l.nombre, g.nombre`);
+    res.json({ grupos: r.recordset });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.get('/api/grupos/:lider_id', async (req, res) => {
   try {
     const r = await pool.request()
@@ -416,7 +432,7 @@ app.get('/api/lideres/activos', async (req, res) => {
   try {
     const { lider_id } = req.query;
     const info = await getLiderInfo(lider_id);
-    if (!esPastoral(info.rol)) return res.status(403).json({ error: 'Sin permisos' });
+    if (!esPastoral(info.rol) && info.rol !== 'secretaria') return res.status(403).json({ error: 'Sin permisos' });
     const result = await pool.request()
       .input('inst_id', sql.Int, info.institucion_id)
       .query(`SELECT id, nombre FROM Lideres WHERE activo = 1 AND institucion_id = @inst_id ORDER BY nombre`);
@@ -838,14 +854,23 @@ app.put('/api/discipulos/:id', async (req, res) => {
     req2.input('fecha_nacimiento', sql.Date, fecha_nacimiento || null);
     req2.input('updateObs', sql.Bit, updateObs ? 1 : 0);
     req2.input('observaciones', sql.NVarChar(sql.MAX), observaciones);
-    if (grupo_id && isAdmin) {
-      req2.input('grupo_id', sql.Int, parseInt(grupo_id));
+    if (isAdmin || isSecretaria) {
+      const updateLider = 'new_lider_id' in req.body;
+      const newLiderId  = req.body.new_lider_id ? parseInt(req.body.new_lider_id) : null;
+      const updateGrupo = 'grupo_id' in req.body || updateLider;
+      const grupoIdVal  = grupo_id ? parseInt(grupo_id) : null;
+      req2.input('updateLider',  sql.Bit, updateLider ? 1 : 0);
+      req2.input('new_lider_id', sql.Int, newLiderId);
+      req2.input('updateGrupo',  sql.Bit, updateGrupo ? 1 : 0);
+      req2.input('grupo_id_val', sql.Int, grupoIdVal);
       await req2.query(
         `UPDATE Discipulos SET
-           nombre=CASE WHEN @nombre='' THEN nombre ELSE @nombre END,
-           celular=@celular, fecha_nacimiento=@fecha_nacimiento,
-           observaciones=CASE WHEN @updateObs=1 THEN @observaciones ELSE observaciones END,
-           grupo_id=@grupo_id
+           nombre           = CASE WHEN @nombre='' THEN nombre ELSE @nombre END,
+           celular          = @celular,
+           fecha_nacimiento = @fecha_nacimiento,
+           observaciones    = CASE WHEN @updateObs=1   THEN @observaciones ELSE observaciones END,
+           lider_id         = CASE WHEN @updateLider=1 THEN @new_lider_id  ELSE lider_id END,
+           grupo_id         = CASE WHEN @updateGrupo=1 THEN @grupo_id_val  ELSE grupo_id END
          WHERE id=@id`
       );
     } else {
